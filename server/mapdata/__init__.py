@@ -29,6 +29,7 @@ anything.
 
 from domain import BBox, Coord, bounds_of, haversine_m, polyline_length_m
 
+from .addresses import Address, NominatimAddressSource, parse_nominatim
 from .errors import BadResponse, MapDataError, SourceUnavailable
 from .graph import GraphBuild, NetworkGraphView, RoadGraphProvider, build_graph, node_id_for
 from .http import HttpClient
@@ -62,6 +63,10 @@ __all__ = [
     "parse_overpass",
     "free_flow_for",
     "parse_maxspeed",
+    # Addresses
+    "Address",
+    "NominatimAddressSource",
+    "parse_nominatim",
     # Persistence
     "RoadStore",
     "StoredRoadNetwork",

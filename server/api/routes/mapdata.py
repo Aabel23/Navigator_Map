@@ -1,4 +1,4 @@
-"""GET /api/v1/mapdata/roads -- the server-side road network, as data.
+"""GET /api/v1/mapdata/... -- the server-side road network, as data.
 
 This is map *data*, not a map. It returns the road segments the server
 computes with -- geometry, class, free-flow reference, one-way flag -- and it
@@ -17,7 +17,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from mapdata import MapDataError, SourceUnavailable
 
-from ..schemas import bbox_payload, parse_bbox
+from ..schemas import ApiError, bbox_payload, parse_bbox, parse_point
 
 blueprint = Blueprint("mapdata", __name__)
 
@@ -62,6 +62,28 @@ def get_graph_summary():
     area = parse_bbox(request.args.get("bbox"), default=services.default_area())
     view = services.graphs.graph_for(area)
     return jsonify({"status": "ok", **bbox_payload(view.area), **view.summary()})
+
+
+@blueprint.get("/mapdata/address")
+def get_address():
+    """What a coordinate is called: house number, street, ward, district, city.
+
+    ``?point=lon,lat``, longitude first like every other coordinate here. The
+    client asks this for the driver's own position, so the answer is cached
+    and rate-limited upstream -- a phone may ask as often as it likes and
+    Nominatim still sees at most one request a second.
+    """
+    services = current_app.extensions["services"]
+    if services.addresses is None:
+        raise ApiError("reverse geocoding is not configured", status=503)
+    point = parse_point(request.args.get("point"), field="point")
+    try:
+        address = services.addresses.reverse(point.as_tuple())
+    except MapDataError:
+        raise
+    except Exception as err:  # noqa: BLE001 - one error type leaves this boundary
+        raise SourceUnavailable(f"geocoder unavailable: {err}") from err
+    return jsonify({"status": "ok", **address.as_dict()})
 
 
 def _roads(services, area):

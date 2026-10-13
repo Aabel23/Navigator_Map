@@ -45,7 +45,7 @@ pip install -r requirements.txt
 
 python main.py --check          # wire everything, run health checks, exit
 python main.py                  # development server on 127.0.0.1:8000
-python -m pytest                # 796 tests
+python -m pytest                # 815 tests
 ```
 
 A fresh checkout with no configuration starts: it fetches central District 1,
@@ -75,6 +75,7 @@ Six things, deliberately. Everything is under `/api/v1` except health.
 | `POST /route` | Compute a route between coordinates |
 | `GET /mapdata/roads?bbox=` | The server's road network, as GeoJSON |
 | `GET /mapdata/graph?bbox=` | How the routable graph came out — counts, not contents |
+| `GET /mapdata/address?point=lon,lat` | Reverse geocoding: the street address at a point |
 | `GET /traffic?bbox=` | Current road speeds, with provenance |
 | `GET /traffic/levels` | The level table: thresholds, labels, colours |
 | `GET /roadstate?bbox=` | Closures, flooding, works, incidents in force |
@@ -179,6 +180,7 @@ Everything is free and keyless. That is a project rule, not a coincidence.
 |---|---|---|
 | [Overpass / OpenStreetMap](https://overpass-api.de/) | road geometry, classes, `maxspeed`, one-ways | worldwide |
 | [Digitraffic](https://www.digitraffic.fi/en/road-traffic/) (Fintraffic) | measured speeds, incidents, roadworks | Finland |
+| [Nominatim](https://nominatim.org/) (OSM) | reverse geocoding — the address at a point; ≤ 1 request/s, cached | worldwide |
 | GPS probes | speeds where drivers actually are | wherever clients are |
 | `SimulatedTrafficProvider` | a deterministic model over OSM geometry | anywhere |
 
