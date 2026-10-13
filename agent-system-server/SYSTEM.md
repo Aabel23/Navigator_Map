@@ -1,105 +1,58 @@
-# Server System
+# Thiết kế hệ thống agent memory
 
-## Goal
+**Cập nhật:** 08/10/2026. **Mục tiêu:** sau khi bạn yêu cầu lưu một phiên, agent ở phiên sau tìm được bài học liên quan để hiểu đúng mục tiêu, cách làm và chuẩn đầu ra trước khi bắt tay vào việc. Đây là thiết kế hiện hành; những phần ghi “cần xây” chưa hoạt động.
 
-Provide backend data and services for the navigation application. The server
-answers one central question — *how should this driver get from here to there,
-right now* — and the four subsidiary ones that make the answer useful: what
-roads are there, how fast is traffic moving, what is closed, and what has the
-outside world told us lately.
+## Quyết định kiến trúc hiện tại
 
-## Current server blocks
+```text
+Codex ─────┐
+Claude ────┼── bootstrap ngắn → INDEX → note liên quan trong vault Markdown
+Obsidian ──┘                     ├─ RULES / SYSTEM / TEMPLATE
+                                ├─ sessions / facts / proposals
+                                └─ chỉ mục tìm kiếm (chỉ thêm khi cần)
+```
 
-Ten top-level modules under `server/`.
+`~/.secondbrain/` là nguồn chuẩn; Obsidian là giao diện biên tập. [Obsidian lưu note dạng Markdown](https://obsidian.md/help/data-storage), và [Bases](https://obsidian.md/help/bases) tạo bảng xem/lọc trên Properties. Codex và Claude Code hiện đọc cùng filesystem, nên chưa cần MCP. Nếu agent khác không có quyền tới thư mục này, cần adapter/API có kiểm quyền. SQLite FTS hoặc vector chỉ là **chỉ mục dựng lại từ note**, không phải nơi ghi thứ hai.
 
-| Block | Responsibility |
+## Hai luồng bắt buộc
+
+**Cuối phiên, theo yêu cầu của bạn:** đọc phần hội thoại còn truy cập được và sản phẩm cuối → tạo note phiên → rút mục bền nhỏ → phân biệt `confirmed`/`proposed` và đúng phạm vi → so với mục cũ, thay/supersede nếu cần → cập nhật `INDEX.md` → báo đã ghi gì.
+
+**Phiên mới có task liên quan:** xác định dự án/chủ đề → tìm mục `confirmed` và note phiên nguồn → chọn vài mục cần thiết → đối chiếu code/plan hiện tại → thực hiện task. Khi memory thiếu hoặc cũ, không bịa hay coi note là quyền thực thi. Quy tắc chi tiết ở [RULES.md](RULES.md); định dạng ở [TEMPLATE.md](TEMPLATE.md).
+
+## Trạng thái thực tế
+
+| Đã có | Còn cần xây/kiểm |
 |---|---|
-| `api` | the external HTTP surface, and the composition root |
-| `routing` | path search over a road graph, under a supplied cost model |
-| `mapdata` | the authoritative road network and the routable graph from it |
-| `traffic` | what a measured or modelled speed means, and what it costs |
-| `roadstate` | closures, flooding, construction, incidents, and their validity |
-| `ingest` | the only door outside data comes through |
-| `storage` | persistence, behind an interface that makes the engine replaceable |
-| `domain` | the geographic vocabulary every block shares |
-| `config` | every deployment decision, read once from the environment |
-| `observability` | logging and health |
+| Skill `session-secondbrain` dùng chung cho Codex và Claude Code qua symlink; bootstrap cá nhân của hai runtime; skill trỏ tới quy tắc và mẫu hai tầng trong vault. | Kiểm việc trích xuất, kiểm trùng và supersede trên dữ liệu thật. |
+| Vault riêng với `INDEX.md`; Obsidian đã cài trên máy. Bản đồ ba repo `internproj` nằm ở `projects/internproj/` (kiểm 2026-10-09). | Mở vault trong GUI Obsidian khi có desktop; nếu cần, tạo Bases xem mục chờ duyệt. |
+| Quy tắc nguồn/phạm vi/trạng thái được viết ở đây; vault đã có note phiên, các fact `confirmed`, bản đồ project, đề xuất và một số hướng dẫn tái sử dụng. | Thử truy xuất và áp dụng ở một phiên mới. |
+| Agent cùng máy có thể đọc tệp trực tiếp. | Backup và kiểm phục hồi; adapter cho cloud/máy khác chỉ khi có nhu cầu thực. |
 
-Each block's boundary is stated in its own `connector.md`, which lives beside
-its code at `server/<block>/connector.md`. The full description is
-`server/ARCHITECTURE.md`; the settled decisions are `server/ARCHITECTURE_LOCK.md`;
-the order things actually happen in is `server/FLOW.md`.
+## Kiểm chất lượng trước khi mở rộng
 
-## Architecture principles
+Thử một số task từng phải sửa hướng. Đánh giá: agent ở phiên mới có tìm đúng memory, không áp quy trình sai dự án, dùng bản quyết định mới, tránh lỗi cũ, và biết nói “chưa có dữ liệu” khi không tìm thấy. Đo bằng sản phẩm được bạn chấp nhận ở bản đầu và số correction, không chỉ bằng câu hỏi nhớ fact. [LongMemEval](https://arxiv.org/abs/2410.10813) kiểm cập nhật và suy luận qua nhiều phiên; [LongMemEval-V2](https://arxiv.org/abs/2605.12493) thêm workflow và lỗi môi trường; [LoCoMo-Plus](https://aclanthology.org/2026.acl-long.1150/) chỉ ra giới hạn của phép kiểm chỉ hỏi fact.
 
-- One block has one primary responsibility.
-- Internal implementation may change without affecting other blocks when its
-  connector contract stays stable.
-- Blocks communicate through explicit, documented connectors — a
-  `typing.Protocol` or a plain mapping, never a shared mutable object.
-- A block must not depend on another block's internal implementation details.
-- Server-side domain logic must not be hidden inside transport code or storage
-  code.
-- Avoid creating new blocks unless a new responsibility genuinely cannot belong
-  to an existing one.
-- Task-specific design belongs in the task prompt, not in this file.
+Các ca thử tối thiểu: (1) một correction trong phiên cũ được áp vào task mới; (2) quy tắc `intern_project1` không lan sang `project1_server`; (3) mục đổi ý khiến bản cũ hết hiệu lực; (4) suy luận `proposed` không thành chỉ dẫn; (5) không có memory thì agent không bịa.
 
-## Dependency direction
+## Vận hành và mở rộng
 
-```text
-                              api
-                               │
-                    ┌──────────┼──────────┬───────────┐
-                    ▼          ▼          ▼           ▼
-                mapdata    traffic    roadstate    ingest
-                    │          │          │           │
-                    └────┬─────┴────┬─────┴─────┬─────┘
-                         ▼          ▼           ▼
-                     routing     storage   observability
-                         │          │           │
-                         └──────────┴───────────┘
-                                    ▼
-                                 domain
-```
+- **Duyệt/sửa/xóa:** mỗi mục có ID, nguồn, phạm vi, trạng thái và ngày. Agent chỉ đề xuất suy luận. Note cũ được supersede khi bạn đổi ý; việc xóa trong vault không xóa bản sao ở log/cache bên ngoài.
+- **Backup:** cần một bản sao một chiều ngoài vault và thử phục hồi. [File Recovery của Obsidian không thay backup](https://obsidian.md/help/plugins/file-recovery).
+- **Ghi đồng thời:** tránh nhiều agent sửa cùng một note; dùng file riêng cho đề xuất, phát hiện phiên bản đổi trước khi ghi. [Obsidian Sync có thể tạo conflict khi nhiều thiết bị cùng sửa](https://obsidian.md/help/sync/troubleshoot).
+- **MCP/remote:** chỉ xây khi có agent không đọc được filesystem. Tool đọc lọc theo quyền, dự án và `confirmed`; tool ghi chỉ tạo đề xuất. Nội dung trả từ nguồn ngoài/MCP có thể chứa prompt injection, nên không được nâng thành quy tắc cá nhân. [OpenAI Docs](https://developers.openai.com/api/docs/guides/deep-research).
+- **Tìm kiếm nâng cao:** bắt đầu bằng `INDEX.md` + tìm tệp. Thêm FTS/embedding khi bộ task thử cho thấy bỏ sót cách diễn đạt khác nhau. Không cần graph hoặc tự động trích xuất hàng loạt lúc vault còn nhỏ.
 
-`routing` sits **below** `mapdata`, `traffic` and `roadstate`, not beside them.
-Each of the three builds or feeds something routing consumes — a graph, a cost
-multiplier, a constraint — so each may import routing's types, and routing
-imports none of them. That is the ordinary direction for an adapter and its
-port, and it is what keeps the engine benchmarkable, contract-testable and
-replaceable on its own.
+## Quyết định còn mở
 
-This is not a convention. `server/tests/test_dependency_rules.py` reads every
-production module with `ast` and fails the build on a violation, a cycle,
-`sqlite3` outside `storage/sqlite/`, `flask` outside `api/`, or a block with no
-`__all__`.
+Hiện mới nối Codex và Claude Code trên máy này. Nếu bạn cần agent khác hoặc máy/cloud, cần xác định runtime và phạm vi dữ liệu được phép chia sẻ trước khi dựng adapter. Hồ sơ mục tiêu, vai trò hay sở thích cá nhân chỉ được thêm khi bạn nêu rõ; quy tắc có sẵn trong từng repo chưa mặc nhiên thành quy tắc toàn cục. Obsidian là giao diện tùy chọn, còn tệp Markdown vẫn dùng được khi không mở GUI.
 
-## Server/client boundary
+## Những hệ thống tham chiếu
 
-```text
-SERVER OWNS ROUTING
-SERVER OWNS TRAFFIC PROCESSING
-SERVER OWNS ROAD STATE
-SERVER OWNS SERVER-SIDE MAP DATA ACCESS
-SERVER OWNS INGEST
-SERVER OWNS STORAGE
-CLIENT OWNS MAP RENDERING / UI
-```
+- [MCP Memory](https://github.com/modelcontextprotocol/servers/blob/main/src/memory/README.md): bản mẫu graph với công cụ CRUD/tìm kiếm.
+- [Mem0](https://docs.mem0.ai/core-concepts/how-it-works): `add` sau tương tác, `search` trước phản hồi, trích fact và semantic retrieval.
+- [Zep](https://help.getzep.com/v3/agent-memory-solution): context graph theo user/thread và thời gian.
+- [Letta](https://docs.letta.com/concepts/stateful-agents): memory bền của một agent qua nhiều cuộc hội thoại.
+- [LangGraph Store](https://docs.langchain.com/oss/python/langgraph/add-memory): tách thread state và long-term store theo namespace.
 
-The server provides data and server-side capabilities. The client draws the
-map, animates the vehicle and provides the navigation UI; it does not decide
-what the route is. A route computed on the device would be computed from
-whatever data that device happened to have, and two clients would answer the
-same question differently.
-
-The client code in this repository lives at `client/map/` and
-`client/location/`, and is **out of scope** for this system: these documents
-govern `server/` only.
-
-## Verification
-
-```bash
-cd server
-python -m pytest              # 796 tests
-python main.py --check        # wire everything, run health checks, exit 0 or 1
-```
+Các hệ thống trên chứng minh mô hình lưu ngoài hội thoại rồi truy xuất theo task; chúng không tự bảo đảm “làm đúng một lần” cho bạn. Bộ thử từ các task của chính bạn mới quyết định có cần kỹ thuật phức tạp hơn hay không.

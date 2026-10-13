@@ -1,0 +1,1304 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FlexMix · Sơ đồ khối</title>
+<meta name="description" content="Sơ đồ khối và luồng hoạt động của phần mềm điều khiển máy pha đồ uống FlexMix (version1.0), dựng từ mã nguồn.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.9143)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tài liệu kỹ thuật · FlexMix version1.0</div>
+      <h1>Sơ đồ khối và luồng hoạt động máy pha FlexMix</h1>
+    </div>
+    <div class="meta">
+      <span><b>Nguồn:</b> <code>version1.0</code> · <code>v1.0.0-4-g9273508</code></span>
+      <span><b>Phân tích:</b> 06/10/2026</span>
+      <span><b>Quy mô:</b> 74 file .py · ~28.750 dòng</span>
+    </div>
+  </header>
+
+  <!-- ===================================================== 1 -->
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Màn hình</span>
+        <span><i class="sw proc"></i>Thread / tiến trình</span>
+        <span><i class="sw hot"></i>Điểm nóng</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw file"></i>File cầu nối</span>
+        <span><i class="sw hw"></i>Phần cứng</span>
+        <span><i class="ln"></i>Đường đi một đơn (số = thứ tự)</span>
+        <span><i class="ln g"></i>Phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<!--OVERVIEW-->
+<svg class="ov" viewBox="0 30 1340 700" role="img" aria-label="Sơ đồ khối toàn hệ thống FlexMix: bốn màn hình nói chuyện với một máy chủ cổng 8080 trong tiến trình main.py; run_flow sinh process_runner cho mỗi đơn để điều khiển bơm, loadcell và bảng nút; MySQL và các file JSON làm cầu nối; mười hai bước của một đơn được đánh số trên các mũi tên màu cam.">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="zn" x="16" y="62" width="190" height="348" rx="12"/>
+<text x="18" y="52" class="zt" text-anchor="start">MÀN HÌNH · KIOSK</text>
+<text x="28" y="88" class="tn" text-anchor="start">Khách và nhân viên chạm màn</text>
+<g class="nd ui"><rect x="28" y="100" width="152" height="58" rx="8"/>
+<text x="104.0" y="119.0" class="tt" text-anchor="middle">Màn bán hàng</text>
+<text x="104.0" y="134.0" class="ts" text-anchor="middle">đặt món · in QR</text>
+<text x="104.0" y="148.0" class="ts" text-anchor="middle">store_gui</text>
+</g>
+<g class="nd ui"><rect x="28" y="168" width="152" height="58" rx="8"/>
+<text x="104.0" y="187.0" class="tt" text-anchor="middle">Màn pha chế</text>
+<text x="104.0" y="202.0" class="ts" text-anchor="middle">xem tiến độ · BẮT ĐẦU</text>
+<text x="104.0" y="216.0" class="ts" text-anchor="middle">bartender_gui</text>
+</g>
+<g class="nd ui"><rect x="28" y="236" width="152" height="58" rx="8"/>
+<text x="104.0" y="255.0" class="tt" text-anchor="middle">Màn quản trị</text>
+<text x="104.0" y="270.0" class="ts" text-anchor="middle">menu · kho · vé · báo cáo</text>
+<text x="104.0" y="284.0" class="ts" text-anchor="middle">admin_gui</text>
+</g>
+<g class="nd ui"><rect x="28" y="304" width="152" height="58" rx="8"/>
+<text x="104.0" y="323.0" class="tt" text-anchor="middle">Màn test tay</text>
+<text x="104.0" y="338.0" class="ts" text-anchor="middle">chạy bơm bằng tay</text>
+<text x="104.0" y="352.0" class="ts" text-anchor="middle">test_gui · nút 15</text>
+</g>
+<text x="28" y="382" class="tn" text-anchor="start">Firefox kiosk · LightDM</text>
+<text x="28" y="398" class="tn" text-anchor="start">đóng là tự mở lại sau 1 s</text>
+<path class="e main" d="M180,129 H214"/>
+<path class="e main" d="M180,197 H214"/>
+<path class="e" d="M180,265 H214"/>
+<path class="e" d="M180,333 H214"/>
+<path class="e" d="M214,333 V197"/>
+<path class="e main" d="M214,197 V103"/>
+<text x="325" y="96" class="tl" text-anchor="middle">HTTP :8080</text>
+<g class="bd"><circle cx="197" cy="129" r="9.5"/><text x="197" y="132.8" text-anchor="middle">1</text></g>
+<g class="bd"><circle cx="197" cy="197" r="9.5"/><text x="197" y="200.8" text-anchor="middle">9</text></g>
+<g transform="translate(30,0)">
+<text x="232" y="52" class="zt" text-anchor="start">DATABASE</text>
+<g class="nd store">
+<path d="M232,149 A58.0,9 0 0 1 348,149 V651 A58.0,9 0 0 1 232,651 Z"/>
+<path class="lid" d="M232,149 A58.0,9 0 0 0 348,149"/>
+</g>
+<text x="244" y="182" class="tt" text-anchor="start">beveragepos</text>
+<circle class="dot" cx="245" cy="210.5" r="2"/>
+<text x="252" y="214" class="tmono" text-anchor="start">order_ticket</text>
+<circle class="dot" cx="245" cy="229.5" r="2"/>
+<text x="252" y="233" class="tmono" text-anchor="start">drink · recipe</text>
+<circle class="dot" cx="245" cy="248.5" r="2"/>
+<text x="252" y="252" class="tmono" text-anchor="start">recipe_action</text>
+<circle class="dot" cx="245" cy="267.5" r="2"/>
+<text x="252" y="271" class="tmono" text-anchor="start">ingredient</text>
+<circle class="dot" cx="245" cy="286.5" r="2"/>
+<text x="252" y="290" class="tmono" text-anchor="start">category</text>
+<circle class="dot" cx="245" cy="305.5" r="2"/>
+<text x="252" y="309" class="tmono" text-anchor="start">admin_user</text>
+<circle class="dot" cx="245" cy="324.5" r="2"/>
+<text x="252" y="328" class="tmono" text-anchor="start">role_permission</text>
+<circle class="dot" cx="245" cy="343.5" r="2"/>
+<text x="252" y="347" class="tmono" text-anchor="start">error_log</text>
+<circle class="dot" cx="245" cy="362.5" r="2"/>
+<text x="252" y="366" class="tmono" text-anchor="start">store_setting</text>
+<circle class="dot" cx="245" cy="381.5" r="2"/>
+<text x="252" y="385" class="tmono" text-anchor="start">schema_migration</text>
+<text x="244" y="430" class="tn" text-anchor="start">trigger tự tính</text>
+<text x="244" y="444" class="tn" text-anchor="start">drink.in_stock</text>
+</g>
+<g transform="translate(60,0)">
+<rect class="zn" x="360" y="62" width="410" height="280" rx="12"/>
+<text x="362" y="52" class="zt" text-anchor="start">MAIN.PY · 1 TIẾN TRÌNH, 3 THREAD</text>
+<rect class="zn" x="360" y="400" width="410" height="310" rx="12"/>
+<text x="362" y="390" class="zt" text-anchor="start">TIẾN TRÌNH CON · MỖI ĐƠN</text>
+<rect class="zn" x="790" y="62" width="220" height="648" rx="12"/>
+<text x="792" y="52" class="zt" text-anchor="start">FILE TRÊN ĐĨA</text>
+<rect class="zn" x="1036" y="62" width="228" height="648" rx="12"/>
+<text x="1038" y="52" class="zt" text-anchor="start">PHẦN CỨNG</text>
+<g class="nd proc"><rect x="376" y="80" width="378" height="72" rx="8"/>
+<text x="390" y="106.0" class="tt" text-anchor="start">T1 · store_gui.serve   :8080</text>
+<circle class="dot" cx="393" cy="117.5" r="2"/>
+<text x="401" y="121.0" class="ts" text-anchor="start">4 màn hình + admin API · phát vé QR</text>
+<circle class="dot" cx="393" cy="131.5" r="2"/>
+<text x="401" y="135.0" class="ts" text-anchor="start">in nhãn · relay lệnh pha xuống :8000</text>
+</g>
+<g class="nd proc"><rect x="376" y="168" width="378" height="50" rx="8"/>
+<text x="565.0" y="190.0" class="tt" text-anchor="middle">T2 · sync_menu</text>
+<text x="565.0" y="205.0" class="ts" text-anchor="middle">DB → menu-data.js, mỗi 1 phút</text>
+</g>
+<g class="nd proc"><rect x="376" y="234" width="106" height="44" rx="8"/>
+<text x="429.0" y="253.0" class="tt" text-anchor="middle">ButtonWatcher</text>
+<text x="429.0" y="268.0" class="ts" text-anchor="middle">nút 14 · 15</text>
+</g>
+<g class="nd proc"><rect x="494" y="234" width="260" height="72" rx="8"/>
+<text x="508" y="260.0" class="tt" text-anchor="start">T3 · run_flow</text>
+<circle class="dot" cx="511" cy="271.5" r="2"/>
+<text x="519" y="275.0" class="ts" text-anchor="start">chờ mã → dựng công thức</text>
+<circle class="dot" cx="511" cy="285.5" r="2"/>
+<text x="519" y="289.0" class="ts" text-anchor="start">sinh runner → chốt vé</text>
+</g>
+<text x="376" y="322" class="tn" text-anchor="start">1 thread dừng → os._exit(1)</text>
+<text x="376" y="336" class="tn" text-anchor="start">→ systemd dựng lại cả tiến trình</text>
+<path class="e main" d="M318,138 H376" marker-end="url(#aa)" marker-start="url(#aa)"/>
+<g class="bd"><circle cx="347" cy="138" r="9.5"/><text x="347" y="141.8" text-anchor="middle">2</text></g>
+<path class="e" d="M318,193 H376" marker-end="url(#ag)" marker-start="url(#ag)"/>
+<path class="e main" d="M318,294 H494" marker-end="url(#aa)" marker-start="url(#aa)"/>
+<g class="nd hot"><rect x="376" y="440" width="238" height="96" rx="8"/>
+<text x="390" y="471.0" class="tt" text-anchor="start">process_runner   :8000</text>
+<circle class="dot" cx="393" cy="482.5" r="2"/>
+<text x="401" y="486.0" class="ts" text-anchor="start">loopback · pha đúng 1 ly</text>
+<circle class="dot" cx="393" cy="496.5" r="2"/>
+<text x="401" y="500.0" class="ts" text-anchor="start">bơm · cân · bảng nút</text>
+<circle class="dot" cx="393" cy="510.5" r="2"/>
+<text x="401" y="514.0" class="ts" text-anchor="start">kiểm ±20 g sau mỗi bước bơm</text>
+</g>
+<text x="378" y="432" class="thot" text-anchor="start">điểm nóng · 3.154 dòng</text>
+<g class="nd proc"><rect x="630" y="440" width="124" height="60" rx="8"/>
+<text x="692.0" y="467.0" class="tt" text-anchor="middle">scan.scanner</text>
+<text x="692.0" y="482.0" class="ts" text-anchor="middle">USB → raw_qr</text>
+</g>
+<path class="e main" d="M318,488 H376" marker-end="url(#aa)" marker-start="url(#aa)"/>
+<g class="bd"><circle cx="347" cy="488" r="9.5"/><text x="347" y="491.8" text-anchor="middle">12</text></g>
+<text x="376" y="566" class="tn" text-anchor="start">Loại bước:</text>
+<rect class="chip" x="440" y="553" width="46" height="19" rx="9.5"/>
+<text x="463.0" y="566.5" class="tchip" text-anchor="middle">start</text>
+<rect class="chip" x="492.0" y="553" width="39" height="19" rx="9.5"/>
+<text x="511.4" y="566.5" class="tchip" text-anchor="middle">pump</text>
+<rect class="chip" x="536.8" y="553" width="53" height="19" rx="9.5"/>
+<text x="563.4" y="566.5" class="tchip" text-anchor="middle">manual</text>
+<rect class="chip" x="596.0" y="553" width="53" height="19" rx="9.5"/>
+<text x="622.6" y="566.5" class="tchip" text-anchor="middle">detect</text>
+<rect class="chip" x="655.2" y="553" width="53" height="19" rx="9.5"/>
+<text x="681.8" y="566.5" class="tchip" text-anchor="middle">action</text>
+<text x="376" y="596" class="tmono2" text-anchor="start">pending → waiting → running → done | failed</text>
+<text x="376" y="620" class="tn" text-anchor="start">Máy sở hữu mọi status; màn hình chỉ bật đèn.</text>
+<path class="e main" d="M560,306 V440" marker-end="url(#aa)"/>
+<text x="568" y="378" class="tl" text-anchor="start">sinh mỗi đơn</text>
+<g class="bd"><circle cx="560" cy="360" r="9.5"/><text x="560" y="363.8" text-anchor="middle">7</text></g>
+<path class="e dash" d="M700,306 V440" marker-end="url(#ag)"/>
+<text x="694" y="392" class="tl" text-anchor="end">sinh</text>
+<g class="nd file"><rect x="804" y="168" width="192" height="50" rx="8"/>
+<text x="900.0" y="190.0" class="tm" text-anchor="middle">store_gui/menu-data.js</text>
+<text x="900.0" y="205.0" class="ts" text-anchor="middle">thực đơn + tồn kho</text>
+</g>
+<g class="nd file"><rect x="804" y="232" width="192" height="46" rx="8"/>
+<text x="900.0" y="251.0" class="tm" text-anchor="middle">order/handoff.json</text>
+<text x="900.0" y="267.0" class="tm" text-anchor="middle">order/scan_notice.json</text>
+</g>
+<g class="nd file"><rect x="804" y="286" width="192" height="40" rx="8"/>
+<text x="900.0" y="310.0" class="tm" text-anchor="middle">scan/raw_qr.json</text>
+</g>
+<g class="nd file"><rect x="804" y="494" width="192" height="46" rx="8"/>
+<text x="900.0" y="514.0" class="tm" text-anchor="middle">order/current_recipe.json</text>
+<text x="900.0" y="529.0" class="ts" text-anchor="middle">tiến độ từng bước, poll 120 ms</text>
+</g>
+<g class="nd store"><rect x="804" y="552" width="192" height="40" rx="8"/>
+<text x="900.0" y="569.0" class="tm" text-anchor="middle">qrproto.env</text>
+<text x="900.0" y="584.0" class="ts" text-anchor="middle">khoá AES-256 · MID máy</text>
+</g>
+<g class="nd store"><rect x="804" y="600" width="192" height="40" rx="8"/>
+<text x="900.0" y="617.0" class="tm" text-anchor="middle">/var/lib/flexmix</text>
+<text x="900.0" y="632.0" class="ts" text-anchor="middle">hiệu chuẩn bơm, loadcell</text>
+</g>
+<path class="e" d="M754,193 H804" marker-end="url(#ag)"/>
+<path class="e main" d="M754,255 H804" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="779" cy="255" r="9.5"/><text x="779" y="258.8" text-anchor="middle">8</text></g>
+<path class="e main" d="M804,306 H754" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="779" cy="306" r="9.5"/><text x="779" y="309.8" text-anchor="middle">6</text></g>
+<path class="e main" d="M754,456 H778 V350 H900 V326" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="840" cy="350" r="9.5"/><text x="840" y="353.8" text-anchor="middle">5</text></g>
+<path class="e main" d="M614,512 H804" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="720" cy="512" r="9.5"/><text x="720" y="515.8" text-anchor="middle">11</text></g>
+<g class="nd hw"><rect x="1050" y="80" width="200" height="46" rx="8"/>
+<text x="1150.0" y="100.0" class="tt" text-anchor="middle">Máy in nhãn</text>
+<text x="1150.0" y="115.0" class="ts" text-anchor="middle">XP-350BM · CUPS · 50×30 mm</text>
+</g>
+<path class="e main" d="M754,103 H1050" marker-end="url(#aa)"/>
+<text x="900" y="96" class="tl" text-anchor="middle">in nhãn · TSPL</text>
+<g class="bd"><circle cx="1020" cy="103" r="9.5"/><text x="1020" y="106.8" text-anchor="middle">3</text></g>
+<text x="1150" y="190" class="tt" text-anchor="middle">Raspberry Pi 5</text>
+<text x="1150" y="208" class="ts" text-anchor="middle">Ubuntu 24.04 · kernel raspi</text>
+<text x="1150" y="224" class="ts" text-anchor="middle">GPIO · I2C bus 1 · USB</text>
+<g class="nd hw"><rect x="1050" y="456" width="200" height="48" rx="8"/>
+<text x="1150.0" y="477.0" class="tt" text-anchor="middle">Máy quét QR</text>
+<text x="1150.0" y="492.0" class="ts" text-anchor="middle">USB CDC-ACM · 9600 baud</text>
+</g>
+<path class="e main" d="M1050,480 H754" marker-end="url(#aa)"/>
+<text x="1010" y="474" class="tl" text-anchor="end">USB serial</text>
+<g class="bd"><circle cx="1026" cy="480" r="9.5"/><text x="1026" y="483.8" text-anchor="middle">4</text></g>
+<g class="nd hw"><rect x="1050" y="546" width="200" height="44" rx="8"/>
+<text x="1150.0" y="565.0" class="tt" text-anchor="middle">10 bơm</text>
+<text x="1150.0" y="580.0" class="ts" text-anchor="middle">GPIO PWM 1 kHz · bơm 8 hút</text>
+</g>
+<g class="nd hw"><rect x="1050" y="602" width="200" height="44" rx="8"/>
+<text x="1150.0" y="621.0" class="tt" text-anchor="middle">Loadcell HX711</text>
+<text x="1150.0" y="636.0" class="ts" text-anchor="middle">GPIO 4 · 18</text>
+</g>
+<g class="nd hw"><rect x="1050" y="658" width="200" height="44" rx="8"/>
+<text x="1150.0" y="677.0" class="tt" text-anchor="middle">Bảng 16 nút có đèn</text>
+<text x="1150.0" y="692.0" class="ts" text-anchor="middle">2 × PCF8575 · I2C</text>
+</g>
+<path class="e main" d="M614,533 H762 V652 H1030"/>
+<path class="e main" d="M1030,568 V680"/>
+<path class="e main" d="M1030,568 H1050" marker-end="url(#aa)"/>
+<path class="e main" d="M1030,624 H1050" marker-end="url(#aa)"/>
+<path class="e main" d="M1030,680 H1050" marker-end="url(#aa)"/>
+<text x="935" y="668" class="tl" text-anchor="middle">GPIO · HX711 · I2C</text>
+<g class="bd"><circle cx="840" cy="652" r="9.5"/><text x="840" y="655.8" text-anchor="middle">10</text></g>
+</g>
+<path class="e main" d="M214,103 H436" marker-end="url(#aa)"/>
+<rect class="zn" x="16" y="428" width="196" height="286" rx="12"/>
+<text x="30" y="452" class="zt2" text-anchor="start">MỘT ĐƠN, 12 BƯỚC</text>
+<g class="bd"><circle cx="38" cy="472.0" r="9.5"/><text x="38" y="475.8" text-anchor="middle">1</text></g>
+<text x="54" y="476.0" class="tlist" text-anchor="start">Chọn món, bấm In QR</text>
+<g class="bd"><circle cx="38" cy="491.5" r="9.5"/><text x="38" y="495.3" text-anchor="middle">2</text></g>
+<text x="54" y="495.5" class="tlist" text-anchor="start">Phát vé, trạng thái unused</text>
+<g class="bd"><circle cx="38" cy="511.0" r="9.5"/><text x="38" y="514.8" text-anchor="middle">3</text></g>
+<text x="54" y="515.0" class="tlist" text-anchor="start">In nhãn QR</text>
+<g class="bd"><circle cx="38" cy="530.5" r="9.5"/><text x="38" y="534.3" text-anchor="middle">4</text></g>
+<text x="54" y="534.5" class="tlist" text-anchor="start">Quét nhãn tại máy</text>
+<g class="bd"><circle cx="38" cy="550.0" r="9.5"/><text x="38" y="553.8" text-anchor="middle">5</text></g>
+<text x="54" y="554.0" class="tlist" text-anchor="start">Ghi mã vào raw_qr.json</text>
+<g class="bd"><circle cx="38" cy="569.5" r="9.5"/><text x="38" y="573.3" text-anchor="middle">6</text></g>
+<text x="54" y="573.5" class="tlist" text-anchor="start">Xác thực, claim vé</text>
+<g class="bd"><circle cx="38" cy="589.0" r="9.5"/><text x="38" y="592.8" text-anchor="middle">7</text></g>
+<text x="54" y="593.0" class="tlist" text-anchor="start">Sinh process_runner</text>
+<g class="bd"><circle cx="38" cy="608.5" r="9.5"/><text x="38" y="612.3" text-anchor="middle">8</text></g>
+<text x="54" y="612.5" class="tlist" text-anchor="start">handoff → màn pha chế</text>
+<g class="bd"><circle cx="38" cy="628.0" r="9.5"/><text x="38" y="631.8" text-anchor="middle">9</text></g>
+<text x="54" y="632.0" class="tlist" text-anchor="start">Bấm BẮT ĐẦU, cân ly rỗng</text>
+<g class="bd"><circle cx="38" cy="647.5" r="9.5"/><text x="38" y="651.3" text-anchor="middle">10</text></g>
+<text x="54" y="651.5" class="tlist" text-anchor="start">Bơm · cân · bảng nút</text>
+<g class="bd"><circle cx="38" cy="667.0" r="9.5"/><text x="38" y="670.8" text-anchor="middle">11</text></g>
+<text x="54" y="671.0" class="tlist" text-anchor="start">Ghi tiến độ từng bước</text>
+<g class="bd"><circle cx="38" cy="686.5" r="9.5"/><text x="38" y="690.3" text-anchor="middle">12</text></g>
+<text x="54" y="690.5" class="tlist" text-anchor="start">Trừ kho, vé → used</text>
+</svg>
+<!--/OVERVIEW-->
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Máy pha đồ uống tự phục vụ trên Raspberry Pi 5: khách đặt món trên màn cảm ứng, máy in nhãn QR, nhãn được quét tại máy, rồi máy bơm từng nguyên liệu và kiểm lại bằng loadcell. Một tiến trình <code>main.py</code> giữ ba thread; mỗi đơn, <code>run_flow</code> sinh một <code>process_runner</code> riêng để lỗi giữa chừng không kéo sập máy chủ web. Các phần không gọi hàm của nhau qua ranh giới tiến trình: chúng nói chuyện qua HTTP loopback và qua file JSON ghi nguyên tử. Trang web đọc các file cầu nối thông qua chính cổng 8080. Bước 9 (bấm BẮT ĐẦU trên màn pha chế) đi qua :8080 rồi được relay xuống :8000.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính một đơn</a></li>
+        <li><a href="#cau-noi">3. Cầu nối giữa các phần</a></li>
+        <li><a href="#thanh-phan">4. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-main">4.1 Tiến trình và giám sát</a></li>
+        <li class="sub"><a href="#c-ticket">4.2 Đặt đơn, phát vé QR</a></li>
+        <li class="sub"><a href="#c-scan">4.3 Quét mã, dựng công thức</a></li>
+        <li class="sub"><a href="#c-flow">4.4 Vòng điều phối run_flow</a></li>
+        <li class="sub"><a href="#c-runner">4.5 Thực thi công thức</a></li>
+        <li class="sub"><a href="#c-weight">4.6 Kiểm tra khối lượng</a></li>
+        <li class="sub"><a href="#c-life">4.7 Vòng đời vé QR</a></li>
+        <li class="sub"><a href="#c-stock">4.8 Kho và thực đơn</a></li>
+        <li class="sub"><a href="#c-admin">4.9 Quản trị, phân quyền</a></li>
+        <li class="sub"><a href="#c-panel">4.10 Nút dịch vụ, chế độ test</a></li>
+        <li class="sub"><a href="#c-deploy">4.11 Kiosk và triển khai</a></li>
+        <li><a href="#cau-hinh">5. Cấu hình máy</a></li>
+        <li><a href="#ghi-chu">6. Ghi chú khi viết manual</a></li>
+      </ol>
+    </nav>
+
+    <main>
+<!-- ===================================================== 2 -->
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: từ chọn món tới ly đầy</h2></div>
+      <p class="prose">Một ly đồ uống đi qua bốn giai đoạn, mỗi giai đoạn là một dải màu trong sơ đồ: <b>đặt món và in vé</b>, <b>quét vé và nhận đơn</b>, <b>pha chế</b>, rồi <b>kết thúc</b>. Đọc từ trên xuống. Mũi tên liền là một bên ra lệnh cho bên kia. Mũi tên đứt là bên kia trả lời hoặc báo lại.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor K as Khách
+  participant P as Màn bán hàng
+  participant S as Máy chủ web :8080
+  participant D as Database
+  participant M as Máy in · máy quét
+  participant F as Bộ điều phối
+  participant R as Bộ pha chế
+  participant H as Bơm · cân · nút
+
+  rect rgba(201,100,66,0.08)
+    Note over K,H: GIAI ĐOẠN 1 · ĐẶT MÓN VÀ IN VÉ
+    K->>P: Chọn món, tuỳ chọn, bấm In QR
+    P->>S: Gửi đơn
+    S->>D: Lưu vé mới (chưa dùng)
+    S-->>P: Trả mã QR đã mã hoá
+    P->>S: Yêu cầu in
+    S->>M: In nhãn QR
+  end
+
+  rect rgba(74,123,175,0.08)
+    Note over K,H: GIAI ĐOẠN 2 · QUÉT VÉ VÀ NHẬN ĐƠN
+    K->>M: Đưa nhãn vào máy quét
+    M->>F: Báo mã vừa quét
+    F->>D: Kiểm tra mã, giữ vé (đang pha)
+    F->>R: Khởi động bộ pha chế cho đơn này
+    F-->>P: Báo đơn đã bắt đầu, chuyển sang màn pha chế
+  end
+
+  rect rgba(201,100,66,0.08)
+    Note over K,H: GIAI ĐOẠN 3 · PHA CHẾ
+    K->>R: Đặt ly, bấm BẮT ĐẦU
+    R->>H: Cân ly rỗng
+    loop Từng bước
+      R->>H: Bơm
+      H-->>R: Cân lại
+    end
+    Note over R,H: Lệch quá 20 g: bơm bù tối đa 2 lần, vẫn lệch thì dừng đơn
+  end
+
+  rect rgba(74,123,175,0.08)
+    Note over K,H: GIAI ĐOẠN 4 · KẾT THÚC
+    R->>D: Trừ nguyên liệu đã dùng
+    R-->>F: Báo pha xong
+    F->>D: Đánh dấu vé đã dùng
+    F->>H: Tắt bơm và đèn, dọn dữ liệu đơn
+  end
+
+  Note over K,H: Hỏng ở bất kỳ bước nào: máy dừng, màn bán hàng báo lỗi, vé được trả lại để quét lại
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: docstring của <code>order/run_flow.py</code> (mục THE FLOW OF ONE ORDER), <code>store_gui/serve.py</code>, <code>order/qr_to_recipe.py</code>, <code>order/process_runner.py</code>. Nhánh "chạy ngay, không quét" bỏ bước 5–8: màn bán hàng gửi mã thẳng cho máy chủ, máy chủ ghi mã vào đúng chỗ máy quét vẫn ghi, mọi bước sau giống hệt.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Trong mã nguồn</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>Màn bán hàng</td><td><code>store_gui/drinks-pos.js</code></td><td>Màn cảm ứng khách dùng để chọn món</td></tr>
+            <tr><td>Máy chủ web :8080</td><td><code>store_gui/serve.py</code></td><td>Phát vé (<code>/api/ticket</code>), in nhãn (<code>/api/print</code>), chuyển lệnh BẮT ĐẦU xuống bộ pha chế</td></tr>
+            <tr><td>Database</td><td>MySQL <code>beveragepos</code>, bảng <code>order_ticket</code>, <code>ingredient</code></td><td>Giữ trạng thái vé: <code>unused</code> → <code>in_progress</code> → <code>used</code></td></tr>
+            <tr><td>Máy in · máy quét</td><td><code>printer/</code>, <code>scan/scanner.py</code></td><td>In nhãn; ghi mã vừa quét vào <code>scan/raw_qr.json</code></td></tr>
+            <tr><td>Bộ điều phối</td><td><code>order/run_flow.py</code></td><td>Chờ mã, kiểm tra vé, khởi động bộ pha chế, chốt vé khi xong</td></tr>
+            <tr><td>Bộ pha chế</td><td><code>order/process_runner.py</code> (cổng :8000)</td><td>Chạy từng bước công thức, ghi tiến độ cho màn pha chế</td></tr>
+            <tr><td>Bơm · cân · nút</td><td><code>pump_control/</code>, <code>loadcell/</code>, <code>panel_control/</code></td><td>10 bơm, loadcell HX711, bảng 16 nút có đèn</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================================================== 3 -->
+    <section id="cau-noi">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Cầu nối giữa các phần</h2></div>
+      <p class="prose">Một tiến trình Python không điều khiển được trình duyệt, và trình duyệt có thể là một máy tính bảng ở chỗ khác. Vì vậy trạng thái được đặt vào file, các trang tự poll và tự chuyển màn. Bảng dưới liệt kê mọi file cầu nối. Khi máy "đứng", đây là những chỗ cần xem đầu tiên.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>File</th><th>Ai ghi</th><th>Ai đọc</th><th>Sống bao lâu</th></tr></thead>
+          <tbody>
+            <tr><td><code>scan/raw_qr.json</code></td><td><code>scan/scanner.py</code>, hoặc <code>POST /api/start</code></td><td><code>run_flow</code>, poll 0,5 s</td><td>Xoá sau mỗi đơn, kể cả đơn hỏng</td></tr>
+            <tr><td><code>order/current_recipe.json</code></td><td><code>qr_to_recipe</code> tạo, <code>process_runner</code> cập nhật từng trạng thái</td><td>Màn pha chế (120 ms), <code>run_flow</code></td><td>Xoá khi xong hoặc huỷ. <b>Giữ lại khi hỏng</b> để tra lỗi</td></tr>
+            <tr><td><code>order/handoff.json</code></td><td><code>run_flow</code></td><td>Màn bán hàng (chuyển màn), <code>store_gui.serve</code> (tìm cổng runner để relay)</td><td>Chỉ tồn tại khi có đơn đang chạy</td></tr>
+            <tr><td><code>order/scan_notice.json</code></td><td><code>run_flow</code></td><td>Màn bán hàng: popup <span class="pill h">rescan</span> <span class="pill r">refused</span> <span class="pill r">fault</span> <span class="pill m">restart</span></td><td>Xoá khi có lần quét mới</td></tr>
+            <tr><td><code>order/.run_flow.lock</code></td><td><code>run_flow</code> giữ <code>flock</code></td><td><code>store_gui.serve</code> hỏi "flow có đang chạy không"</td><td>Kernel tự nhả khi tiến trình chết</td></tr>
+            <tr><td><code>test_gui/mode.json</code></td><td><code>ButtonWatcher</code> (nút 15)</td><td>Mọi trang; <code>run_flow</code> ngừng nhận mã</td><td>Tự xoá khi <code>run_flow</code> khởi động</td></tr>
+            <tr><td><code>store_gui/menu-data.js</code></td><td><code>sync_menu</code>; <code>store_gui.serve</code> dựng lại nếu cũ hơn 20 s</td><td>Màn bán hàng, poll 30 s</td><td>Luôn có</td></tr>
+            <tr><td><code>order/flow.log</code></td><td><code>run_flow</code>, chỉ ghi thêm</td><td>Người vận hành</td><td>Vĩnh viễn; sống sót cả khi MySQL sập</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Cổng</th><th>Ai nghe</th><th>Bind vào</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td class="num">8080</td><td><code>store_gui.serve</code> + API quản trị mount chung</td><td>loopback + địa chỉ Tailscale (nếu có), <b>không</b> LAN</td><td>Thread canh tailnet tự bind khi <code>tailscaled</code> lên muộn</td></tr>
+            <tr><td class="num">8000</td><td><code>process_runner</code></td><td>chỉ loopback</td><td>Chỉ mở trong lúc pha; 8080 relay 6 endpoint xuống đây</td></tr>
+            <tr><td class="num">8100 · 8090</td><td><code>admin_gui.serve</code> · <code>test_gui.serve</code></td><td>khi chạy riêng</td><td>Chỉ dùng lúc phát triển, <code>main.py</code> không mở</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================================================== 4 -->
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Từng thành phần</h2></div>
+      <p class="prose">Mỗi thẻ dưới đây theo cùng một khuôn: làm gì, sơ đồ, nguồn của sơ đồ, rồi các bước. Thứ tự thẻ theo đường đi của một đơn.</p>
+
+      <!-- 4.1 -->
+      <article class="comp" id="c-main">
+        <header><h3>4.1 · Tiến trình và giám sát</h3><div class="src"><code>main.py</code> · <code>deploy/kiosk/flexmix-backend.service</code> · Sơ đồ: khối · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Chạy ba phần của máy trong ba thread của cùng một tiến trình. Cả ba đều là vòng lặp vô hạn, nên một thread dừng (vì lỗi hay tự return) luôn là bất thường. Khi đó cả tiến trình thoát để systemd khởi động lại. Nếu chỉ để thread đó chết lặng lẽ, màn bán hàng vẫn nhận đơn và thu tiền trong khi không ly nào được pha.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  SD["systemd<br/>Restart=always"] --> M["main.py"]
+  M --> T1["store_gui.serve"]
+  M --> T2["sync_menu<br/>--interval 1"]
+  M --> T3["run_flow"]
+  T1 & T2 & T3 --> X{"Thread kết thúc?<br/>lỗi hoặc return"}
+  X -- "có" --> E["in traceback → journalctl<br/>os._exit(1)"]
+  E -- "tiến trình chết, dựng lại" --> SD
+  class SD,M,T1,T2,T3 proc
+  class X dec
+  class E bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: docstring <code>main.py</code>. Dùng <code>os._exit()</code> chứ không phải <code>sys.exit()</code>, vì <code>sys.exit()</code> trong thread chỉ kết thúc đúng thread đó.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>systemd khởi động <code>main.py</code> bằng <code>.venv</code>, nạp biến từ <code>/etc/flexmix/qrproto.env</code> qua <code>EnvironmentFile=</code>.</li>
+          <li><code>main.py</code> mở ba thread daemon: <code>store_gui</code>, <code>sync_menu</code> (chu kỳ <code>MENU_SYNC_INTERVAL_MINUTES</code> = 1), <code>run_flow</code>.</li>
+          <li>Thread nào kết thúc thì in traceback, flush stdout/stderr, rồi <code>os._exit(1)</code>.</li>
+          <li>Phần cứng không được dọn ở đây. <code>run_flow</code> tự đưa bơm và đèn về nghỉ mỗi lần khởi động, nên kể cả mất điện, lần chạy sau vẫn bắt đầu sạch.</li>
+        </ol>
+      </article>
+
+      <!-- 4.2 -->
+      <article class="comp" id="c-ticket">
+        <header><h3>4.2 · Đặt đơn và phát vé QR</h3><div class="src"><code>store_gui/drinks-pos.js</code> · <code>store_gui/serve.py</code> · <code>qrproto/</code> · <code>database/order_ticket.py</code> · <code>configuration/order_mode.py</code> · Sơ đồ: quyết định · 6 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Biến lựa chọn của khách thành một vé dùng một lần. Payload được mã hoá ở máy chủ (AES-256-GCM, khoá riêng của máy), không bao giờ ở trình duyệt, vì trình duyệt không được giữ khoá. Vé được ghi vào bảng <code>order_ticket</code> với khoá là SHA-256 của chính chuỗi payload.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  A["Khách chọn món<br/>order_mode.json quyết định<br/>hiện nút nào"] -- "In QR / Chạy ngay" --> E["POST /api/ticket<br/>qrproto.create<br/>issue() → unused"]
+  E --> F{"Nút được<br/>bấm"}
+  F -- "In QR" --> G["POST /api/print · spool 30 s<br/>nhãn 50×30 mm<br/>khách quét tại máy"]
+  F -- "Chạy ngay" --> H{"run_flow chạy<br/>và test tắt?"}
+  H -- "có" --> R["scan/raw_qr.json<br/>→ mục 4.3"]
+  G -- "scanner ghi" --> R
+  H ~~~ R
+  H -- "không" --> H1["409 · báo lý do"]
+  class A ui
+  class F,H dec
+  class E,G proc
+  class R file
+  class H1 bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>store_gui/serve.py</code> (<code>_issue_ticket</code>, <code>_start_order</code>, <code>_print_label</code>), <code>drinks-pos.js</code> (<code>issueTicket</code>). Hai nút dùng chung một vé đã cache theo chữ ký đơn, nên in rồi bấm chạy vẫn chỉ là một mã sống.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Thực đơn và các tuỳ chọn lấy từ <code>menu-data.js</code>. Mỗi món chỉ cho chọn nguyên liệu có sẵn trong công thức của chính nó.</li>
+          <li><code>order_mode.json</code> quyết định màn hiện nút nào: <code>printQR</code>, <code>runDirect</code>, hoặc cả hai (mặc định). Tắt cả hai bị từ chối.</li>
+          <li>Payload mang SKU (= <code>drink_id</code>) và các cặp lệnh: loại <code>01</code> WEIGHT (số gram thay cho công thức) và <code>02</code> BOOLEAN (giữ hoặc bỏ topping). Không còn loại phần trăm.</li>
+          <li>Vé chỉ được phát khi thật sự in hoặc chạy. Mở rồi đóng modal QR không để lại vé rác.</li>
+          <li>In nhãn chạy <code>printer/printer_qr.py</code> trong tiến trình con có hạn 30 s, để driver USB treo không kéo sập máy chủ.</li>
+          <li>"Chạy ngay" chỉ được nhận khi <code>run_flow</code> đang giữ lock và máy không ở chế độ test.</li>
+        </ol>
+      </article>
+
+      <!-- 4.3 -->
+      <article class="comp" id="c-scan">
+        <header><h3>4.3 · Quét mã và dựng công thức</h3><div class="src"><code>scan/scanner.py</code> · <code>order/qr_to_recipe.py</code> · <code>database/export_data.py</code> · Sơ đồ: quyết định · 7 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Đọc mã từ máy quét USB, kiểm tra theo 8 tầng của giao thức QR v1.4, ghép lựa chọn của khách vào công thức gốc trong MySQL, rồi viết <code>order/current_recipe.json</code>. Vé chỉ bị "tiêu" ở bước áp chót: sau khi dựng được công thức, ngay trước khi ghi file.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  A["raw_qr.json<br/>mã mới"] --> B1{"Tầng 1–5, 8<br/>CRC · giải mã"}
+  B1 -- "hỏng" --> X1["ScanError<br/>'vui lòng quét lại'<br/>không ghi error_log"]
+  B1 -- "đạt" --> B2{"Tầng 6–7<br/>đúng MID?<br/>TS ≤ 600 s?"}
+  B2 -- "không" --> X2["OrderError<br/>popup + error_log"]
+  B2 -- "có" --> C["Tra SKU → công thức gốc<br/>áp WEIGHT · BOOLEAN<br/>gram → giây theo hiệu chuẩn"]
+  C --> F{"claim vé<br/>còn unused?"}
+  F -- "không" --> X2
+  F -- "có" --> G["current_recipe.json<br/>ticket_key = sha256"]
+  class A file
+  class C proc
+  class B1,B2,F dec
+  class X1 human
+  class X2 bad
+  class G ok
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: docstring <code>order/qr_to_recipe.py</code>, <code>qrproto/api.py</code>. Mã đọc sai do nhãn nhăn hay quét nghiêng không phải lỗi máy nên không vào <code>error_log</code>. Mã đọc đúng nhưng bị từ chối thì có ghi.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><code>scanner.py</code> tìm thiết bị qua <code>/dev/serial/by-id/*usbscn*</code>, mở cổng ở chế độ exclusive, cắt mã theo CR/LF và bỏ mã trùng trong cửa sổ chống lặp.</li>
+          <li>Ghi nguyên tử vào <code>scan/raw_qr.json</code> (file tạm rồi đổi tên). Mỗi lần quét đè lần trước.</li>
+          <li><code>qrproto.verify()</code> chạy 8 tầng. Tầng 6 (MID) và 7 (độ mới) đứng giữa hai nửa của <code>inner.py</code>, nên mã vừa hết hạn vừa sai nguyên liệu được báo là hết hạn.</li>
+          <li>SKU tra ra công thức gốc: nguyên liệu bơm, số gram và số bước.</li>
+          <li>Bỏ hết nguyên liệu của một bước thì bỏ luôn bước đó, rồi đánh số lại 1, 2, 3.</li>
+          <li><code>export_data</code> tách mỗi bước thành bước <code>pump</code>, kèm <code>manual</code> + <code>detect</code> nếu có nguyên liệu thêm tay, và <code>action</code> (+ <code>detect</code> nếu <code>cup_returns</code>). Thời gian bơm = (gram − dead_gram) / gram_per_sec.</li>
+          <li>Claim vé là một câu <code>UPDATE</code> duy nhất, để hai lần quét cùng lúc thì MySQL chỉ cho một lần thắng. Ghi file lỗi thì vé được nhả lại.</li>
+        </ol>
+      </article>
+
+      <!-- 4.4 -->
+      <article class="comp" id="c-flow">
+        <header><h3>4.4 · Vòng điều phối đơn</h3><div class="src"><code>order/run_flow.py</code> · Sơ đồ: luồng · 8 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Đây là "nhạc trưởng". Nó không tự chạm phần cứng hay MySQL mà chạy các phần đã có theo đúng thứ tự: chờ mã, dựng công thức, sinh runner, chuyển màn, chờ runner xong, rồi chốt vé và dọn dẹp, dù đơn kết thúc theo cách nào.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S0["① Khởi động"] --> L1{"Chế độ test?"}
+  L1 -- "bật" --> LW["Chờ, không nhận mã"]
+  LW --> L1
+  L1 -- "tắt" --> L2["Chờ mã mới · poll 0,5 s"]
+  L2 --> L3["② Dựng công thức (4.3)"]
+  L3 --> L6{"Runner kết thúc"}
+  L6 -- "mã 0" --> R1["chờ 8 s lời cảm ơn<br/>vé → used"]
+  L6 -- "bị huỷ" --> R2["vé trả lại<br/>'Đơn đã bị hủy'"]
+  L6 -- "lỗi" --> R3["giữ current_recipe.json<br/>vé trả lại · 'Máy gặp sự cố'"]
+  R1 & R2 & R3 --> Z["reset phần cứng · resume watcher<br/>xoá raw_qr.json"]
+  Z --> L1
+  class S0,L2,L3,Z proc
+  class L1,L6 dec
+  class LW,R2 human
+  class R1 ok
+  class R3 bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Khởi động</td></tr>
+                <tr><td>Lock</td><td>Lấy <code>.run_flow.lock</code>, chỉ một flow chạy</td></tr>
+                <tr><td>Cổng</td><td>Kiểm cổng 8000 còn trống</td></tr>
+                <tr><td>Vé</td><td>Nhả vé kẹt <code>in_progress</code> → <code>unused</code></td></tr>
+                <tr><td>Dọn file</td><td>Xoá <code>handoff.json</code>, <code>scan_notice.json</code>, <code>mode.json</code></td></tr>
+                <tr><td>Máy quét</td><td>Chạy <code>scanner.py</code></td></tr>
+                <tr><td>Phần cứng</td><td>Reset bơm + đèn, <b>rồi</b> mới mở ButtonWatcher</td></tr>
+                <tr class="grp"><td colspan="2">② Dựng công thức (4.3)</td></tr>
+                <tr><td>1</td><td>Dựng <code>current_recipe.json</code> từ mã</td></tr>
+                <tr><td>2</td><td>Tạm dừng ButtonWatcher</td></tr>
+                <tr><td>3</td><td>Sinh <code>process_runner</code></td></tr>
+                <tr><td>4</td><td>Chờ runner nhận kết nối trên cổng 8000</td></tr>
+                <tr><td>5</td><td>Ghi <code>handoff.json</code> để màn bán hàng chuyển màn</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>run_flow.main()</code> và <code>run_one_order()</code>. "Vé trả lại" nghĩa là <code>unused</code> nếu khách có nhãn, <code>noqr_err</code> nếu đơn chạy từ màn hình mà không in (xem 4.7).</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Lấy lock để chỉ một flow chạy. Tiến trình thứ hai thoát, hoặc xếp hàng nếu có <code>--wait</code>.</li>
+          <li>Phục hồi: vé kẹt <code>in_progress</code> từ lần chết trước được đưa về <code>unused</code>. File công thức còn trạng thái "running" được coi là bóng ma vì không có ai nghe trên cổng 8000.</li>
+          <li>Reset phần cứng <b>trước</b> khi ButtonWatcher mở chip nút, để hai bên không bao giờ cùng ở trên bus.</li>
+          <li>Ở chế độ test (nút 15), không nhận mã. Mã của khách để nguyên, không bị tiêu rồi vứt.</li>
+          <li>Trước khi sinh runner, tạm dừng ButtonWatcher. Hai thread đọc trên cùng một bus I2C đã từng làm mất cả đơn.</li>
+          <li>Chỉ ghi <code>handoff.json</code> khi runner đã nhận kết nối. Màn bán hàng kiểm tra trang đích phản hồi rồi mới chuyển.</li>
+          <li>Đơn thành công: đánh dấu handoff finished, chờ 8 s cho màn pha chế đếm lời cảm ơn, rồi mới xoá file.</li>
+          <li>Đơn hỏng: giữ <code>current_recipe.json</code> (ghi bước hỏng và lỗi), nhưng vẫn xoá <code>raw_qr.json</code> để lần quét sau không bị chặn.</li>
+        </ol>
+      </article>
+
+      <!-- 4.5 -->
+      <article class="comp" id="c-runner">
+        <header><h3>4.5 · Thực thi công thức</h3><div class="src"><code>order/process_runner.py</code> · <code>bartender_gui/</code> · <code>bartender_gui/PROCESS_SCHEMA.md</code> · Sơ đồ: trạng thái + phân nhánh · 6 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Pha một ly. Đọc <code>current_recipe.json</code>, chạy từng bước theo trường <code>order</code>, và ghi ngược trạng thái vào chính file đó. Cùng một file vừa là đầu vào, vừa là nhật ký tiến độ, vừa là cầu nối với màn pha chế. <b>Máy sở hữu mọi <code>status</code></b>. Màn hình chỉ có một quyền ghi: bật một đèn (<code>/api/process/button</code>).</p>
+        
+          <figure class="dg">
+            <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> pending
+  pending --> waiting: đến lượt, giữ 2 s
+  waiting --> running: started_at
+  running --> done: xong + kiểm cân
+  running --> failed: lỗi hoặc huỷ
+  done --> [*]
+  failed --> [*]
+            </script>
+            <div class="dg-canvas"></div>
+            <figcaption>Trạng thái của mỗi bước. <code>waiting</code> = đang là bước hiện tại nhưng bị giữ, đồng hồ trên màn đứng ở 0. Bước <code>running</code> mà <code>updated_at</code> không đổi trong 8 s thì màn báo "Máy không phản hồi".</figcaption>
+          </figure>
+          <figure class="dg">
+            <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  ST["Bước kế tiếp<br/>theo 'order'"] --> T{"type"}
+  T -- "start · bước 0" --> A0["Chờ BẮT ĐẦU<br/>cân ly rỗng ≥ 15 g"]
+  T -- "pump" --> A1["Mọi bơm chạy song song<br/>mỗi bơm theo duration_sec"]
+  T -- "manual" --> A2["Bật đèn bảng nút<br/>chờ mọi nút sáng"]
+  T -- "detect" --> A3["Chờ 'Đã đặt ly'<br/>nhìn cân 1 lần"]
+  T -- "action" --> A4["Lặp clip hướng dẫn<br/>chờ xác nhận"]
+  A1 --> V["verify_pump_step<br/>xem 4.6"]
+  A0 & A2 & A3 & A4 --> BL["Làm mới baseline cân"]
+  class ST proc
+  class T dec
+  class A0,A2,A3,A4 human
+  class A1 hw
+  class V,BL proc
+            </script>
+            <div class="dg-canvas"></div>
+            <figcaption>Nguồn: <code>run_step()</code>. Bước start được chèn vào đầu mọi công thức lúc chạy, nên máy không bao giờ bơm khi chưa có ly.</figcaption>
+          </figure>
+        
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Loại bước</th><th>Kết thúc khi</th><th>Ai giải phóng</th></tr></thead>
+            <tbody>
+              <tr><td><code>pump</code></td><td>Mỗi bơm chạy đủ <code>duration_sec</code> (tính sẵn, không đổi lại từ gram), rồi cân đạt</td><td><span class="pill m">máy</span></td></tr>
+              <tr><td><code>manual</code></td><td>Mọi nút trong <code>buttons[]</code> đã <code>lit</code>, bấm từ bảng nút hoặc chạm trên màn</td><td><span class="pill h">người</span> bảng nút / màn</td></tr>
+              <tr><td><code>detect</code></td><td>Bấm "Đã đặt ly", cân thấy có vật ≥ <code>CUP_MIN_GRAM</code>. Cân không trả lời thì tin lời người bấm</td><td><span class="pill h">người</span> + cân</td></tr>
+              <tr><td><code>action</code></td><td>Một lần bấm xác nhận khi clip lắc / khuấy / trang trí đang lặp</td><td><span class="pill h">người</span> trên màn</td></tr>
+              <tr><td><code>start</code> (bước 0)</td><td>Bấm BẮT ĐẦU và cân được ly. Nếu chưa thấy ly, canh cân thêm 30 s</td><td><span class="pill h">người</span> + cân</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><code>main()</code> nạp công thức, mở máy chủ cho màn pha chế trên :8000 (loopback), và mở thread bảng nút nếu có bước <code>manual</code>.</li>
+          <li><code>run_process()</code> chèn bước start, gắn <code>order_id</code> rồi đi qua các bước chưa <code>done</code>. Nhờ vậy một lần chạy bị ngắt có thể tiếp tục.</li>
+          <li>Giữa hai bước có trộn chất lỏng, chờ <code>STEP_DELAY_SECONDS</code> = 2 s cho ống ráo. Sau bước start thì không chờ.</li>
+          <li>Lần bấm còn sót từ cổng trước bị xoá <b>trước</b> khi bước mới hiện ra, để lần bấm nhanh của người đang cầm ly không bị nuốt.</li>
+          <li>Pause, resume và cancel đến qua relay. Lý do huỷ được ghi vào công thức để <code>run_flow</code> phân biệt "bị huỷ" với "hỏng".</li>
+          <li>Xong mọi bước thì trừ kho đúng lượng đã rót. Đơn hỏng vẫn trừ phần đã rót (bước hỏng trừ đủ), để kho trong DB không lệch với kệ.</li>
+        </ol>
+      </article>
+
+      <!-- 4.6 -->
+      <article class="comp" id="c-weight">
+        <header><h3>4.6 · Kiểm tra khối lượng sau mỗi bước bơm</h3><div class="src"><code>process_runner.verify_pump_step()</code> · <code>guard_cup_on_scale()</code> · <code>loadcell/</code> · Sơ đồ: quyết định · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Cân lại sau mỗi bước bơm để biết bơm có thật sự ra đủ nước hay không. Mỗi bước chỉ chịu trách nhiệm cho lượng của chính nó: mốc so sánh là số cân <b>đo được</b> sau bước trước, không phải số công thức mong đợi. Vì vậy một lần thiếu nhỏ không lan thành chuỗi lỗi ở các bước sau.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  A["Bước bơm xong<br/>cân ổn định"] --> C{"Cân có<br/>trả lời?"}
+  C -- "không" --> F1["Lỗi đọc cân<br/>kiểm tra dây"]
+  C -- "có" --> D{"Nhẹ đi<br/>quá 10 g?"}
+  D -- "có" --> F2["Ly rời khỏi cân<br/>dừng bơm"]
+  D -- "không" --> E{"Thiếu > 20 g,<br/>1 bơm,<br/>còn lượt bù?"}
+  E -- "có" --> G["Bơm bù ≤ 2 lần<br/>≤ thời lượng bước"]
+  G -- "cân lại" --> D
+  E -- "không" --> H{"Lệch trong<br/>±20 g?"}
+  H -- "có" --> OK["done<br/>baseline mới"]
+  H -- "không" --> F3["Cân không khớp<br/>error_log, trừ kho"]
+  class A proc
+  class C,D,E,H dec
+  class G hw
+  class OK ok
+  class F1,F2,F3 bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: hằng số <code>WEIGHT_TOLERANCE_GRAM</code> = 20, <code>WEIGHT_LOSS_LIMIT_GRAM</code> = 10, <code>TOPUP_MAX_ATTEMPTS</code> = 2, <code>TOPUP_MIN_GRAM</code> = 2 trong <code>order/process_runner.py</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Kiểm "ly bị nhấc" <b>trước</b> khi tin con số thiếu. Từng có lỗi: nhấc ly giữa chừng làm số rót âm, vòng bơm bù hiểu thành thiếu rất nhiều và chạy bơm hơn một phút.</li>
+          <li>Chỉ bơm bù khi bước có đúng một bơm. Nhiều bơm chạy cùng lúc thì cân chỉ thấy một con số chung, không biết bơm nào thiếu.</li>
+          <li>Rót thừa không cứu được (không rút nước ra được), nên thừa quá 20 g là hỏng ngay.</li>
+          <li>Kết quả ghi vào <code>step.weight_check</code> (target, poured, difference, topups). Màn pha chế và người tra lỗi đọc được.</li>
+        </ol>
+      </article>
+
+      <!-- 4.7 -->
+      <article class="comp" id="c-life">
+        <header><h3>4.7 · Vòng đời vé QR</h3><div class="src"><code>database/order_ticket.py</code> · bảng <code>order_ticket</code> · Sơ đồ: trạng thái · 5 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Giấy không tự ghi nhớ được là mình đã bị quét. Vì vậy tính "dùng một lần" nằm trong database chứ không nằm trên nhãn. Mọi kiểm tra mà nhãn tự mang theo thì một bản photo cũng mang theo được.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> unused: issue()<br/>in nhãn hoặc chạy ngay
+  unused --> in_progress: claim()<br/>quét được chấp nhận
+  in_progress --> used: complete()<br/>đã rót xong
+  in_progress --> unused: release()<br/>hỏng, khách còn nhãn
+  in_progress --> noqr_err: mark_failed()<br/>hỏng, không có nhãn
+  unused --> expired: claim() sau 24 h
+  used --> [*]
+  noqr_err --> [*]
+  expired --> [*]
+  class unused ui
+  class in_progress proc
+  class used ok
+  class noqr_err bad
+  class expired muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: docstring <code>order_ticket.py</code> (THE LIFECYCLE), ràng buộc <code>ck_order_ticket_status</code> trong <code>database.sql</code>. Khi khởi động, <code>release_stranded_tickets()</code> đưa mọi vé kẹt <code>in_progress</code> về <code>unused</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><code>issue()</code> ghi payload, giá và tên món <b>tại thời điểm bán</b>. Báo cáo doanh thu đọc từ đây, không tính lại theo giá hiện tại.</li>
+          <li><code>claim()</code> là thao tác duy nhất có tranh chấp. Nó là một câu <code>UPDATE … WHERE status='unused'</code> nên khoá dòng của MySQL quyết định ai thắng.</li>
+          <li>Hết hạn được kiểm <b>lúc claim</b>, không có tiến trình quét định kỳ. Máy tắt qua đêm vẫn xử lý đúng nhãn của hôm qua.</li>
+          <li>Đơn hỏng mà khách có nhãn thì vé về <code>unused</code> để quét lại. Đơn chạy ngay không in thì vé thành <code>noqr_err</code>, nhân viên phát mã mới.</li>
+          <li>In lại nhãn (trang "Vé QR" của admin) dùng lại đúng payload cũ: hai tờ giấy nhưng vẫn chỉ một ly.</li>
+        </ol>
+      </article>
+
+      <!-- 4.8 -->
+      <article class="comp" id="c-stock">
+        <header><h3>4.8 · Kho nguyên liệu và thực đơn</h3><div class="src"><code>store_gui/sync_menu.py</code> · <code>database/inventory_service.py</code> · trigger trong <code>database.sql</code> · Sơ đồ: khối · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Giữ cho màn bán hàng không bán món máy không pha được. Trigger MySQL tự tính lại <code>drink.in_stock</code> khi nguyên liệu vượt ngưỡng, rồi <code>sync_menu</code> đổ ảnh chụp thực đơn ra file JS cho trang tĩnh đọc.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  ADM["Admin nạp kho<br/>/api/ingredient/*"] --> ING[("ingredient<br/>mức · ngưỡng")]
+  RUN["process_runner<br/>trừ sau mỗi đơn"] --> ING
+  ING -- "trigger" --> DR[("drink.in_stock")]
+  REC[("recipe")] -- "trigger" --> DR
+  DR --> SYN["sync_menu<br/>mỗi 1 phút"]
+  SYN --> MJ["menu-data.js"]
+  SRV["store_gui.serve<br/>dựng lại nếu cũ > 20 s"] --> MJ
+  MJ -- "poll 30 s" --> POS["Màn bán hàng<br/>available và in_stock"]
+  class ADM,POS ui
+  class RUN,SYN,SRV proc
+  class ING,DR,REC store
+  class MJ file
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: docstring <code>sync_menu.py</code>, hằng số <code>MENU_MAX_AGE_SECONDS</code> trong <code>store_gui/serve.py</code>. Dựng lại ngay khi trả file vì ai đó có thể sửa thẳng trong MySQL, mà khi đó Python không hề biết.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><code>available</code> (nhân viên bật bán) và <code>in_stock</code> (đủ nguyên liệu) là hai công tắc khác nhau. Món hết hàng vẫn hiện nhưng không bấm được.</li>
+          <li>Tuỳ chọn của món sinh từ chính các dòng công thức của món đó: topping boolean và nguyên liệu chỉnh lượng.</li>
+          <li>Kết quả viết thành <code>.js</code> chứ không phải <code>.json</code>, vì trang mở từ <code>file://</code> không fetch được JSON nhưng luôn nạp được <code>&lt;script&gt;</code>.</li>
+          <li>Bơm hụt hay hỏng giữa chừng vẫn trừ phần đã rót. Nếu không, kho trên DB lệch dần với kệ, và dấu hiệu đầu tiên là một bơm chạy khô.</li>
+        </ol>
+      </article>
+
+      <!-- 4.9 -->
+      <article class="comp" id="c-admin">
+        <header><h3>4.9 · Quản trị và phân quyền</h3><div class="src"><code>admin_gui/serve.py</code> · <code>admin_gui/auth.py</code> · <code>admin_gui/permissions.py</code> · Sơ đồ: quyết định · 5 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Các endpoint quản trị được mount chung cổng 8080 với màn bán hàng, nên mọi quyết định đều nằm ở máy chủ. Trình duyệt không được tin. Mỗi endpoint thuộc đúng một <b>area</b>, mỗi role giữ một tập area.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  L["login.html"] -- "POST /api/admin/login" --> A["auth.py<br/>PBKDF2-SHA256 · 240.000 vòng"]
+  A -- "token HMAC · 12 h" --> L
+  Q["Mỗi request /api/*"] --> C1{"Chữ ký và hạn đúng,<br/>cấp sau sessions_valid_from?"}
+  C1 -- "không" --> R401["401"]
+  C1 -- "có" --> C2["Đọc role từ admin_user<br/>(role không nằm trong token)"]
+  C2 --> C3{"Role có area<br/>của endpoint?"}
+  C3 -- "không" --> R403["403"]
+  C3 -- "có" --> H["Handler"]
+  class L ui
+  class A,C2,H,Q proc
+  class C1,C3 dec
+  class R401,R403 bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: docstring <code>auth.py</code> (THE SESSION) và <code>permissions.py</code>. Đổi mật khẩu hay khoá tài khoản sẽ dời <code>sessions_valid_from</code>, nên phiên cũ chết ngay ở request kế tiếp.</figcaption>
+        </figure>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Area</th><th>Trang admin</th><th>owner</th><th>manager</th><th>staff</th></tr></thead>
+            <tbody>
+              <tr><td><code>users</code></td><td>users.html: tài khoản, lưới quyền</td><td>●</td><td></td><td></td></tr>
+              <tr><td><code>catalogue</code></td><td>menu, home (bố cục trang đầu), bin, ảnh và clip</td><td>●</td><td>●</td><td></td></tr>
+              <tr><td><code>stock</code></td><td>ingredients: tạo, xoá nguyên liệu</td><td>●</td><td>●</td><td></td></tr>
+              <tr><td><code>refill</code></td><td>refill: nạp lại bình</td><td>●</td><td>●</td><td>●</td></tr>
+              <tr><td><code>report</code></td><td>report: doanh thu, đơn</td><td>●</td><td>●</td><td>●</td></tr>
+              <tr><td><code>tickets</code></td><td>tickets: trạng thái vé, in lại</td><td>●</td><td>●</td><td>●</td></tr>
+              <tr><td><code>errors</code> / <code>errors_purge</code></td><td>errors: đọc nhật ký lỗi / xoá</td><td>● / ●</td><td>● / –</td><td>● / –</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Tài khoản nằm trong MySQL (<code>admin_user</code>). Bí mật ký token nằm ở <code>configuration/admin_account.json</code> (mode 0600), để kiểm token không cần gọi DB.</li>
+          <li>Quyền mặc định viết trong code (<code>DEFAULT_ROLE_AREAS</code>). Bảng <code>role_permission</code> chỉ chứa những gì đã được sửa có chủ ý.</li>
+          <li><code>shell</code> luôn được cấp cho mọi role. Role owner luôn giữ <code>users</code> để không ai tự khoá mình ra ngoài.</li>
+          <li>Trang <code>mode</code> đổi <code>order_mode.json</code>. Trang <code>display</code> đổi độ phân giải kiosk và tự hoàn tác sau 20 s nếu không xác nhận.</li>
+          <li>Công cụ dòng lệnh: <code>python3 -m admin_gui.auth --list | --set-password | --role | --new-secret</code>.</li>
+        </ol>
+      </article>
+
+      <!-- 4.10 -->
+      <article class="comp" id="c-panel">
+        <header><h3>4.10 · Bảng nút dịch vụ và chế độ test</h3><div class="src"><code>panel_control/button_watch.py</code> · <code>panel_control/panel.py</code> · Sơ đồ: khối · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Bảng 16 nút có đèn (hai chip PCF8575 trên I2C) vừa dùng cho bước <code>manual</code> vừa là cách cứu máy khi không có bàn phím. Tại mỗi thời điểm, chỉ một bên được đọc chip nút.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  BW["ButtonWatcher<br/>run_flow · máy rảnh"] -- "nút 15" --> TM["test_gui/mode.json<br/>chế độ test"]
+  BW -- "nút 14" --> RS["restart<br/>flexmix-backend"]
+  PN["panel.py<br/>process_runner · đang pha"] -- "nút 14" --> RS
+  PN -- "nút của bước" --> MS["bước manual<br/>≤ 4 đèn cùng lúc"]
+  BW -. "pause / resume" .-> PN
+  class BW,PN proc
+  class TM file
+  class RS bad
+  class MS human
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: docstring <code>button_watch.py</code>, <code>PANEL_MAX_LEDS_ON</code> trong <code>configuration/machine.py</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Nút 15 chỉ có tác dụng khi máy rảnh. Ở chế độ test, <code>run_flow</code> ngừng nhận mã và màn bán hàng tự chuyển sang màn test tay.</li>
+          <li>Nút 14 hoạt động cả khi đang pha, vì đơn bị kẹt chính là lúc người ta bấm nó. Cần rule sudoers <code>/etc/sudoers.d/flexmix-restart</code>.</li>
+          <li>Không bao giờ quá 4 đèn sáng cùng lúc. Chip chỉ chịu khoảng 100 mA tổng; từng có lần bật 16 đèn làm chip treo, mất địa chỉ <code>0x21</code> cho tới khi rút điện.</li>
+          <li>Sau khi khởi động lại bằng nút 14, <code>refresh_kiosk_if_requested()</code> làm mới trình duyệt kiosk đang hiện trang cũ.</li>
+        </ol>
+      </article>
+
+      <!-- 4.11 -->
+      <article class="comp" id="c-deploy">
+        <header><h3>4.11 · Khởi động kiosk và triển khai</h3><div class="src"><code>deploy/install.sh</code> · <code>deploy/kiosk/</code> · <code>deploy/backup.sh</code> · <code>store_gui/kiosk_watchdog.py</code> · Sơ đồ: khối · 13 phase</div></header>
+        <h4>Làm gì</h4>
+        <p>Bật máy lên là màn bán hàng mở toàn màn hình, không có cách nào thoát ra desktop. Backend và phiên đồ hoạ khởi động song song. Script kiosk chờ cổng 8080 trả lời rồi mới mở trình duyệt.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  B["Bật nguồn Pi 5"] --> SV["flexmix-backend.service<br/>main.py"]
+  B --> LD["LightDM autologin<br/>Openbox, tắt phím tắt"]
+  LD --> AS["kiosk-openbox-autostart.sh<br/>display_mode --apply-saved"]
+  AS -- "chờ :8080 trả lời" --> FF["firefox --kiosk --private-window<br/>drinks-pos.html"]
+  FF -- "bị đóng → mở lại sau 1 s" --> AS
+  SV -- "kiosk_watchdog<br/>tab chết → khởi động lại" --> FF
+  SV -. "phục vụ" .-> FF
+  class B hw
+  class SV,AS proc
+  class LD proc
+  class FF ui
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>deploy/kiosk/README.md</code>. Dùng Firefox chứ không dùng Chromium: trên Pi 5, Chromium rút cạn 320 MB CMA và crash đều đặn mỗi 1.040 s (99 lần trong 29 giờ, đo ngày 01/09/2026).</figcaption>
+        </figure>
+        <h4>Cài máy mới: các phase của <code>install.sh all</code></h4>
+        <div class="phases" aria-label="Thứ tự phase cài đặt">
+          <span>preflight</span><i>→</i><span>packages</span><i>→</i><span>hardware</span><i>→</i><span>python</span><i>→</i><span>secrets</span><i>→</i><span>mysql</span><i>→</i><span>database</span><i>→</i><span>account</span><i>→</i><span>printer</span><i>→</i><span>runtime</span><i>→</i><span>service</span><i>→</i><span>kiosk</span><i>→</i><span>verify</span>
+          <i>·</i><span class="x">sudoers</span><span class="x">lockdown</span><span class="x">manual</span>
+        </div>
+        <p class="src" style="color:var(--ink-3);font-size:13px">Ba phase viền đứt chạy riêng, không nằm trong <code>all</code>. Script tự dừng ở ba chỗ cần người: reboot bật I2C, cắm máy in / máy quét, và khoá đường thoát kiosk.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Sao lưu (<code>backup.sh</code>)</th><th>Vì sao</th></tr></thead>
+            <tbody>
+              <tr><td>MySQL <code>beveragepos</code></td><td>Vé, công thức, giá, tồn kho, tài khoản. Không lấy lại được.</td></tr>
+              <tr><td><code>/etc/flexmix/qrproto.env</code></td><td>Khoá QR. Sinh khoá mới làm hỏng vĩnh viễn mọi nhãn đã in mà chưa quét.</td></tr>
+              <tr><td><code>/var/lib/flexmix/</code></td><td>Hiệu chuẩn bơm và loadcell. Làm lại được nhưng mất nhiều giờ.</td></tr>
+              <tr><td><code>recipe/</code></td><td>Ảnh món và clip hướng dẫn do admin tải lên.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><b>Lưu ý khi khôi phục</b>Cần hai lệnh <code>tar</code> chứ không phải một: <code>recipe/</code> nằm trong gói theo đường dẫn tương đối với dự án. Sau đó chạy <code>python3 -m database.main update</code> để áp các migration mới hơn bản sao lưu.</div>
+      </article>
+    </section>
+
+    <!-- ===================================================== 5 -->
+    <section id="cau-hinh">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Cấu hình máy</h2></div>
+      <p class="prose">Mọi thứ khác nhau giữa hai máy vật lý nằm trong một file: <code>configuration/machine.py</code>. File này không import gì, để đọc một setting không vô tình chiếm chân GPIO hay mở bus. Bí mật (khoá QR, mật khẩu MySQL) lấy từ biến môi trường, không bao giờ nằm trong file được git theo dõi.</p>
+      <div class="two">
+        <div class="tbl">
+          <table style="min-width:0">
+            <thead><tr><th>Bơm</th><th>BCM</th><th>Bơm</th><th>BCM</th></tr></thead>
+            <tbody>
+              <tr><td class="num">1</td><td class="num">26</td><td class="num">6</td><td class="num">12</td></tr>
+              <tr><td class="num">2</td><td class="num">15</td><td class="num">7</td><td class="num">13</td></tr>
+              <tr><td class="num">3</td><td class="num">21</td><td class="num">8 · hút</td><td class="num">6</td></tr>
+              <tr><td class="num">4</td><td class="num">20</td><td class="num">9</td><td class="num">5</td></tr>
+              <tr><td class="num">5</td><td class="num">16</td><td class="num">10</td><td class="num">14</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tbl">
+          <table style="min-width:0">
+            <thead><tr><th>Thiết bị / chính sách</th><th>Giá trị</th></tr></thead>
+            <tbody>
+              <tr><td>Loadcell HX711</td><td class="num">SCK 4 · DT 18</td></tr>
+              <tr><td>Bảng nút PCF8575</td><td class="num">I2C bus 1 · nút 0x20 · đèn 0x21</td></tr>
+              <tr><td>Máy in nhãn</td><td class="num">XP-350BM · 50×30 mm · gap 2</td></tr>
+              <tr><td>Máy quét</td><td class="num">9600 baud · by-id "usbscn"</td></tr>
+              <tr><td>Hạn vé</td><td class="num">24 giờ</td></tr>
+              <tr><td>Đồng bộ menu</td><td class="num">1 phút</td></tr>
+              <tr><td>PWM bơm</td><td class="num">1000 Hz</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="prose">Hai bơm trùng một chân BCM bị từ chối ngay lúc import. Triệu chứng của lỗi gõ đó là một ly sai vị mà không có dòng log nào. Số hiệu chuẩn nằm ở <code>/var/lib/flexmix/</code>, ngoài thư mục mã nguồn, để bản clone không mang số đo của máy khác theo.</p>
+    </section>
+
+    <!-- ===================================================== 6 -->
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Ghi chú khi viết manual</h2></div>
+      <p class="prose">Những chỗ mã nguồn và tài liệu đi kèm không khớp nhau, phát hiện trong lúc dựng sơ đồ. Khi viết manual, lấy mã làm chuẩn.</p>
+      <div class="note crit"><b>Thư mục làm việc thiếu file</b>Thư mục <code>version1.0</code> hiện đã xoá nhiều file so với commit <code>HEAD</code>, trong đó có <code>flexmix_debug.py</code> và cả thư mục <code>test_gui/</code>. Nhưng <code>order/run_flow.py</code>, <code>order/process_runner.py</code> và <code>qrproto/</code> vẫn <code>from flexmix_debug import trace</code>, nên <code>main.py</code> sẽ dừng vì <code>ImportError</code> nếu chạy từ bản này. Lấy lại bằng <code>git restore flexmix_debug.py test_gui</code>. Các file <code>README.md</code>, <code>AGENTS.md</code>, <code>docs/</code> cũng đang bị xoá khỏi thư mục làm việc.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Chỗ</th><th>Tài liệu nói</th><th>Mã thực tế</th></tr></thead>
+          <tbody>
+            <tr><td>Chip bảng nút</td><td>README (HEAD): MCP23017</td><td><code>machine.py</code>: hai PCF8575 ở 0x20 / 0x21</td></tr>
+            <tr><td>Bước <code>detect</code></td><td>Docstring đầu <code>process_runner.py</code>: so với ly đã cân ở bước start</td><td><code>run_detect_step()</code> và <code>PROCESS_SCHEMA.md</code>: chỉ hỏi "có gì trên cân" theo <code>CUP_MIN_GRAM</code> = 15 g</td></tr>
+            <tr><td>Kiosk watchdog</td><td>Docstring <code>kiosk_watchdog.py</code> chỉ nói về Chromium</td><td>Kiosk đã chuyển sang Firefox; <code>BROWSER_MARKS</code> nhận cả firefox và chrome</td></tr>
+            <tr><td>Màn pha chế</td><td><code>bartender_gui/README.md</code>, mục "Still to do": chưa tự chạy bơm, chưa có endpoint</td><td>Đã xong: runner tự chạy bơm, có 6 endpoint <code>/api/confirm</code> … <code>/api/process/detect</code></td></tr>
+            <tr><td>Đường dẫn file công thức</td><td><code>PROCESS_SCHEMA.md</code> nhắc <code>order/process.json</code></td><td>Đã đổi tên thành <code>order/current_recipe.json</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid, nạp từ cdn.jsdelivr.net nên cần mạng lần đầu mở; sơ đồ toàn cục là SVG tĩnh, không cần mạng. Nếu Mermaid không tải được, mỗi khung hiện mã nguồn sơ đồ để vẫn đọc được. Nút "Mã nguồn" chép lại mã để sửa; nút "Phóng to" mở sơ đồ ở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

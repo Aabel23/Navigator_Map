@@ -1,0 +1,571 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TÊN · Sơ đồ khối</title>
+<meta name="description" content="MÔ TẢ MỘT CÂU">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.9143)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tài liệu kỹ thuật · TÊN DỰ ÁN</div>
+      <h1>TIÊU ĐỀ: hệ thống làm gì, nhìn từ đâu</h1>
+    </div>
+    <div class="meta">
+      <span><b>Nguồn:</b> <code>repo</code> · <code>commit</code></span>
+      <span><b>Phân tích:</b> DD/MM/YYYY</span>
+      <span><b>Quy mô:</b> N file · ~N dòng</span>
+    </div>
+  </header>
+
+  <!-- 1 · Bức tranh toàn cục: SVG vẽ tay, tĩnh, không cần mạng -->
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Màn hình</span>
+        <span><i class="sw proc"></i>Tiến trình</span>
+        <span><i class="sw hot"></i>Điểm nóng</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw file"></i>File cầu nối</span>
+        <span><i class="sw hw"></i>Phần cứng</span>
+        <span><i class="ln"></i>Đường đi chính (số = thứ tự)</span>
+        <span><i class="ln g"></i>Phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1000 220" role="img" aria-label="MÔ TẢ SƠ ĐỒ TOÀN CỤC BẰNG MỘT CÂU">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="zn" x="16" y="40" width="300" height="160" rx="12"/>
+<text x="18" y="30" class="zt">VÙNG A</text>
+<g class="nd ui"><rect x="40" y="90" width="160" height="58" rx="8"/>
+<text x="120" y="114" class="tt" text-anchor="middle">Khối A</text>
+<text x="120" y="130" class="ts" text-anchor="middle">vai trò ngắn</text></g>
+<rect class="zn" x="460" y="40" width="300" height="160" rx="12"/>
+<text x="462" y="30" class="zt">VÙNG B</text>
+<g class="nd proc"><rect x="500" y="90" width="180" height="58" rx="8"/>
+<text x="590" y="114" class="tt" text-anchor="middle">Khối B</text>
+<text x="590" y="130" class="tm" text-anchor="middle">file.py :8080</text></g>
+<path class="e main" d="M200,119 L500,119" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="350" cy="119" r="9.5"/><text x="350" y="122.8" text-anchor="middle">1</text></g>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Một đoạn diễn giải bằng chữ: hệ thống là gì, các phần nói chuyện với nhau qua đâu, đường đi chính đánh số thế nào.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính</a></li>
+        <li><a href="#thanh-phan">3. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-flow">3.1 Thành phần dạng luồng</a></li>
+        <li class="sub"><a href="#c-life">3.2 Thành phần dạng trạng thái</a></li>
+        <li><a href="#ghi-chu">4. Ghi chú</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <!-- 2 · Một ví dụ đại diện đi hết hệ thống: sequence diagram + bảng ánh xạ -->
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: từ đầu vào tới kết quả</h2></div>
+      <p class="prose">Nói trước cách đọc sơ đồ: chia mấy giai đoạn, mũi tên liền là gì, mũi tên đứt là gì.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor U as Người dùng
+  participant A as Khối A
+  participant B as Khối B
+  U->>A: hành động
+  A->>B: yêu cầu
+  B->>B: • Kiểm điều kiện<br/>• Ghi kết quả
+  B-->>A: trả lời
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: file/hàm cụ thể. Nhánh phụ khác luồng chính ở đâu.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Trong mã nguồn</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>Khối A</td><td><code>path/a.py</code></td><td>Một câu vai trò</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Từng thành phần</h2></div>
+
+      <!-- Thành phần: sơ đồ gọn, chi tiết nằm ở bảng nổi bên cạnh (dg-split) -->
+      <article class="comp" id="c-flow">
+        <header><h3>3.1 · Tên thành phần</h3><div class="src"><code>path/file.py</code> · Sơ đồ: luồng · N bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Một đoạn: vai trò, và nó KHÔNG làm gì.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S0["① Khởi động"] --> D1{"Điều kiện?"}
+  D1 -- "có" --> S1["② Xử lý"]
+  D1 -- "không" --> W["Chờ"]
+  W --> D1
+  S1 --> OK["xong"]
+  S1 --> ER["lỗi · giữ file"]
+  class S0,S1 proc
+  class D1 dec
+  class W human
+  class OK ok
+  class ER bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Khởi động</td></tr>
+                <tr><td>Nhãn</td><td>Một việc, có <code>tên_file</code></td></tr>
+                <tr class="grp"><td colspan="2">② Xử lý</td></tr>
+                <tr><td>1</td><td>Bước con theo thứ tự</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: hàm cụ thể. Giải thích thuật ngữ trong sơ đồ.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Mỗi bước nói vì sao, không chỉ làm gì. Nêu sự cố đã từng xảy ra nếu có.</li>
+        </ol>
+      </article>
+
+      <!-- Thành phần dạng vòng đời: stateDiagram tô màu theo ý nghĩa -->
+      <article class="comp" id="c-life">
+        <header><h3>3.2 · Vòng đời đối tượng</h3><div class="src"><code>path/model.py</code> · Sơ đồ: trạng thái · N bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Vì sao trạng thái phải nằm ở đây.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> new: create()<br/>giải thích ngắn
+  new --> running: start()<br/>giải thích ngắn
+  running --> done: finish()<br/>xong
+  running --> new: release()<br/>trả lại
+  running --> failed: fail()<br/>hỏng
+  new --> expired: hết hạn
+  done --> [*]
+  failed --> [*]
+  expired --> [*]
+  class new ui
+  class running proc
+  class done ok
+  class failed bad
+  class expired muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: ràng buộc/docstring cụ thể.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Ghi chú</h2></div>
+      <div class="note"><b>Lưu ý</b>Điều người đọc dễ hiểu sai.</div>
+      <div class="note crit"><b>Nghiêm trọng</b>Chỗ tài liệu và mã không khớp; lấy mã làm chuẩn.</div>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:false, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  function polishSequence(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const circle = svg.querySelector('marker#sequencenumber circle');
+    if (circle) circle.setAttribute('r', '8.4');
+    svg.querySelectorAll('text.sequenceNumber').forEach(el => el.setAttribute('font-size', '16.8px'));
+    svg.querySelectorAll('path[marker-start]').forEach(path => {
+      const match = /^M\s*([\d.]+),([\d.]+)\s+C\s*[\d.]+,[\d.]+\s+[\d.]+,[\d.]+\s+([\d.]+),([\d.]+)/
+        .exec(path.getAttribute('d') || '');
+      if (!match || Math.abs(Number(match[1]) - Number(match[3])) > 2) return;
+      const x = Number(match[1]), y = Number(match[2]);
+      path.setAttribute('d', `M ${x},${y} L ${x},${y + 0.1}`);
+      path.removeAttribute('marker-end');
+    });
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        if (block.dataset.kind === 'seq') polishSequence(canvas);
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

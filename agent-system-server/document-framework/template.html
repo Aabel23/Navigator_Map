@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="Bản mẫu tài liệu giải thích hệ thống: từ nguồn, mô hình đến kiểm chứng.">
+  <title>Framework tài liệu · Bản mẫu</title>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="document.css">
+</head>
+<body>
+<div class="page">
+  <!-- Thay ví dụ bên dưới bằng nội dung từ BRIEF.md; bỏ component không phục vụ người đọc. -->
+  <header class="masthead">
+    <div class="intro">
+      <p class="eyebrow">Bản mẫu · tài liệu giải thích hệ thống</p>
+      <h1>Từ nguồn thật đến một document có thể kiểm chứng</h1>
+      <p class="lead">Trang này minh họa cách tổ chức một tài liệu: cho người đọc thấy toàn cảnh trước, đi qua một trường hợp cụ thể, rồi mới tới quy tắc và phép kiểm. Khi dùng cho đề tài khác, thay toàn bộ ví dụ và nhãn trạng thái theo nguồn của đề tài đó.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối tượng:</b> người viết và người duyệt tài liệu</span>
+      <span><b>Nguồn:</b> <a href="METHOD.md">quy trình soạn</a> · <a href="BRIEF.md">brief</a></span>
+      <span><b>Trạng thái:</b> bản mẫu, không phải thiết kế dự án</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan" aria-labelledby="overview-title">
+    <div class="overview-head">
+      <h2 id="overview-title">1 · Bức tranh toàn cục</h2>
+      <ul class="legend" aria-label="Chú giải sơ đồ">
+        <li><i class="swatch store" aria-hidden="true"></i>Nguồn</li>
+        <li><i class="swatch process" aria-hidden="true"></i>Xử lý</li>
+        <li><i class="swatch ui" aria-hidden="true"></i>Tài liệu cho người đọc</li>
+        <li><i class="swatch warn" aria-hidden="true"></i>Điểm cần kiểm</li>
+      </ul>
+    </div>
+    <figure class="diagram" aria-labelledby="map-heading map-caption">
+      <div class="diagram-head"><h3 id="map-heading">Bốn bước tạo và kiểm một tài liệu</h3><span class="status proposed">Minh họa</span></div>
+      <div class="diagram-scroll">
+        <svg viewBox="0 0 1040 265" width="1040" height="265" role="img" aria-labelledby="map-svg-title map-svg-desc" xmlns="http://www.w3.org/2000/svg">
+          <title id="map-svg-title">Luồng từ nguồn tới tài liệu đã kiểm</title>
+          <desc id="map-svg-desc">Nguồn hiện hành đi vào mô hình nội dung, chuyển thành trang HTML rồi được kiểm bằng nguồn và bằng render.</desc>
+          <defs><marker id="arrow-map" class="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z"/></marker></defs>
+          <rect class="zone" x="8" y="28" width="1024" height="220" rx="12"/>
+          <text class="diagram-label" x="30" y="55">QUY TRÌNH · NGUỒN VÀ TRẠNG THÁI ĐƯỢC GIỮ XUYÊN SUỐT</text>
+          <path class="edge" d="M230 136H285" marker-end="url(#arrow-map)"/><path class="edge" d="M480 136H535" marker-end="url(#arrow-map)"/><path class="edge" d="M730 136H785" marker-end="url(#arrow-map)"/>
+          <rect class="node store" x="30" y="92" width="200" height="88" rx="9"/><text class="diagram-title" x="130" y="126" text-anchor="middle">1 · Nguồn</text><text class="diagram-sub" x="130" y="150" text-anchor="middle">file · dữ liệu · quyết định</text>
+          <rect class="node process" x="285" y="92" width="195" height="88" rx="9"/><text class="diagram-title" x="382" y="126" text-anchor="middle">2 · Mô hình</text><text class="diagram-sub" x="382" y="150" text-anchor="middle">ranh giới · luồng · trạng thái</text>
+          <rect class="node ui" x="535" y="92" width="195" height="88" rx="9"/><text class="diagram-title" x="632" y="126" text-anchor="middle">3 · Document</text><text class="diagram-sub" x="632" y="150" text-anchor="middle">bản đồ · ví dụ · chi tiết</text>
+          <rect class="node warn" x="785" y="92" width="220" height="88" rx="9"/><text class="diagram-title" x="895" y="126" text-anchor="middle">4 · Kiểm</text><text class="diagram-sub" x="895" y="150" text-anchor="middle">claim · link · desktop/mobile</text>
+          <text class="diagram-edge-label" x="258" y="121" text-anchor="middle">lọc</text><text class="diagram-edge-label" x="508" y="121" text-anchor="middle">chọn hình</text><text class="diagram-edge-label" x="758" y="121" text-anchor="middle">đối chiếu</text>
+        </svg>
+      </div>
+      <p class="diagram-hint">↔ Kéo ngang để xem hết sơ đồ.</p>
+      <figcaption id="map-caption">Đọc từ trái sang phải. Trang đẹp không thay bước kiểm khẳng định với nguồn; nhãn trạng thái phải đi cùng nội dung tới bản giao cuối.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <aside class="toc" aria-label="Mục lục">
+      <div class="toc-inner"><p class="small-label">Mục lục</p><nav aria-label="Các mục">
+        <ol>
+          <li><a href="#tong-quan">1 · Bức tranh toàn cục</a></li>
+          <li><a href="#tinh-huong">2 · Một tình huống cụ thể</a></li>
+          <li><a href="#co-che">3 · Cơ chế và hợp đồng</a></li>
+          <li><a href="#kiem">4 · Phép kiểm</a></li>
+          <li><a href="#gioi-han">5 · Giới hạn và nguồn</a></li>
+        </ol>
+      </nav></div>
+    </aside>
+    <main id="noi-dung">
+      <section id="tinh-huong" aria-labelledby="tinh-huong-title">
+        <div class="sec-head"><span class="sec-no">Mục 2</span><h2 id="tinh-huong-title">Một tình huống cụ thể cho thấy toàn bộ đường đi</h2></div>
+        <p class="section-intro">Ví dụ: người viết nhận yêu cầu “giải thích một hệ thống mới” và cần tạo trang mà người duyệt có thể kiểm từng kết luận. Các bước dưới đây là ví dụ của framework, không phải số liệu hay quyết định của dự án khác.</p>
+        <div class="summary-box"><h3>Đường đi của một khẳng định</h3><ol>
+          <li>Ghi khẳng định cùng trạng thái và nguồn hiện hành.</li>
+          <li>Đặt nó vào một luồng cụ thể, xác định ai tạo, ai nhận và điều kiện xảy ra.</li>
+          <li>Chọn đoạn văn, bảng hoặc sơ đồ theo câu hỏi người đọc cần trả lời.</li>
+          <li>Kiểm lại bản HTML và bản render; nếu nguồn thiếu, ghi rõ phần chưa biết.</li>
+        </ol></div>
+        <aside class="callout warn"><strong>Cần phân biệt</strong><p>Một bước có thể được mô tả rất rõ nhưng vẫn là đề xuất. Nhãn “đã có” chỉ dùng khi nguồn và phép kiểm cho thấy nó đang tồn tại.</p></aside>
+      </section>
+
+      <section id="co-che" aria-labelledby="co-che-title">
+        <div class="sec-head"><span class="sec-no">Mục 3</span><h2 id="co-che-title">Mỗi phần có đầu vào, đầu ra và trách nhiệm rõ</h2></div>
+        <p class="section-intro">Thẻ thành phần dùng khi người đọc cần hiểu một phần hoạt động độc lập. Bỏ thẻ nếu một câu ngắn đã đủ.</p>
+        <article class="component" id="mo-hinh-noi-dung"><header><h3>Mô hình nội dung</h3><span class="status active">Bước soạn</span></header>
+          <p>Mô hình nối bằng chứng với câu trả lời người đọc cần. Nó chỉ giữ những đối tượng, quan hệ, điều kiện và rủi ro có ảnh hưởng tới kết luận.</p>
+          <dl class="io"><div><dt>Đầu vào</dt><dd>Brief, nguồn hiện hành và sổ khẳng định có trạng thái.</dd></div><div><dt>Đầu ra</dt><dd>Một bản đồ, một tình huống đại diện và dàn ý theo câu hỏi.</dd></div></dl>
+          <div class="table-wrap"><table><thead><tr><th>Bước</th><th>Việc</th><th>Kiểm</th></tr></thead><tbody>
+            <tr><td class="id">M.1</td><td>Tách hiện trạng, đề xuất và giả định.</td><td>Mỗi claim quan trọng truy về một nguồn hoặc được đánh dấu chưa rõ.</td></tr>
+            <tr><td class="id">M.2</td><td>Theo một tình huống từ đầu vào tới kết quả.</td><td>Đường đi, chủ thể và nhánh lỗi đọc được bằng cả hình lẫn chữ.</td></tr>
+          </tbody></table></div>
+        </article>
+      </section>
+
+      <section id="kiem" aria-labelledby="kiem-title">
+        <div class="sec-head"><span class="sec-no">Mục 4</span><h2 id="kiem-title">Bản giao chỉ được coi là xong sau khi đối chiếu</h2></div>
+        <div class="table-wrap"><table><thead><tr><th>Điều cần kiểm</th><th>Cách nhìn</th><th>Đạt khi</th></tr></thead><tbody>
+          <tr><td>Nội dung</td><td>Đối chiếu sổ khẳng định với nguồn.</td><td>Không có claim quan trọng được trình bày chắc hơn bằng chứng.</td></tr>
+          <tr><td>Luồng</td><td>Đi từng mũi tên và bước đã đánh số.</td><td>Không thiếu đầu vào/đầu ra hoặc nhánh thất bại chính.</td></tr>
+          <tr><td>Hiển thị</td><td>Mở desktop, điện thoại, dark và in.</td><td>Chữ đọc được; bảng và hình có vùng cuộn riêng trên màn hẹp.</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section id="gioi-han" aria-labelledby="gioi-han-title">
+        <div class="sec-head"><span class="sec-no">Mục 5</span><h2 id="gioi-han-title">Điều framework chưa thể tự quyết định</h2></div>
+        <p class="prose">Mỗi đề tài vẫn cần nguồn thật, người đọc thật và quyết định thật. Framework cung cấp cách điều tra, thứ tự giải thích và cấu trúc trình bày; nội dung không được suy từ màu sắc hay ô trống trong template.</p>
+        <details><summary>Nguồn của bản mẫu này</summary><ul class="source-list">
+          <li><a href="START_HERE.md">Cách dùng và nguồn gốc</a></li>
+          <li><a href="METHOD.md">Phương pháp phân tích và thiết kế</a></li>
+          <li><a href="BRIEF.md">Brief và sổ khẳng định</a></li>
+        </ul></details>
+      </section>
+    </main>
+  </div>
+  <footer class="page-footer">Bản mẫu tái dùng · thay ví dụ bằng dữ liệu của đề tài mới trước khi phát hành.</footer>
+</div>
+</body>
+</html>
