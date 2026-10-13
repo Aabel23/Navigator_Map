@@ -33,6 +33,19 @@ CONTRACT: v1
     waves
   lifecycle: sprite loaded once at start-up; glyph ranges loaded on first use
 
+- port: device_position
+  type: `GeolocationPosition` from `navigator.geolocation.watchPosition`
+  source: the device's receiver, via the browser. Secure context only
+  semantics: turned into `{lon, lat, accuracy, speedKph, heading, timestamp}` by `gps.js`;
+    fixes worse than `NAV_GPS_MAX_ACCURACY_M` are dropped
+  lifecycle: continuous once the person allows location
+
+- port: navigation_server
+  type: JSON over HTTP, `/api/v1/*` on this origin, forwarded to `NAV_SERVER_URL`
+  source: the server block -- `POST /route`, `GET /mapdata/address`, `POST /ingest/probes`
+  semantics: this block computes no route and no address; it asks and draws
+  lifecycle: on a tap (route), on moving 25 m (address), every 15 s (probes)
+
 ## Outputs
 
 - port: frame
@@ -43,7 +56,7 @@ CONTRACT: v1
 
 - port: camera_state
   type: `{worldX, worldY, zoom}` in world-Z0 Mercator pixels relative to the configured origin
-  destination: not yet consumed. `location` and `navigation` will read it to follow the vehicle
+  destination: `driver.js`, which moves it to follow the vehicle until the person drags the map
   semantics: authoritative view state; written only by input handling
   lifecycle: continuous
 

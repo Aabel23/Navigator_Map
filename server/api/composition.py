@@ -37,6 +37,7 @@ from config import Settings
 from domain import BBox
 from ingest import TrafficCollector
 from mapdata import (
+    NominatimAddressSource,
     OverpassRoadSource,
     PersistingRoadNetwork,
     RoadGraphProvider,
@@ -74,6 +75,9 @@ class Services:
     traffic: TrafficService
     road_state: RoadStateStore
     health: HealthRegistry
+    #: Reverse geocoding. Optional so a test that has no use for it does not
+    #: have to build one; the endpoint answers 503 when it is absent.
+    addresses: Any = None
 
     def default_area(self) -> BBox:
         return self.settings.area()
@@ -146,6 +150,7 @@ def build_services(settings: Settings | None = None) -> Services:
         traffic=traffic_service,
         road_state=road_state_store,
         health=HealthRegistry(),
+        addresses=_addresses(settings),
     )
     _register_health(services)
     return services
@@ -176,6 +181,20 @@ def _road_network(settings: Settings, storage: StorageBackend):
         timeout_s=settings.overpass_timeout_s,
     )
     return PersistingRoadNetwork(upstream, storage.documents)
+
+
+def _addresses(settings: Settings) -> NominatimAddressSource:
+    """OSM's own reverse geocoder, rate-limited and cached on disk.
+
+    Same disk cache as the road source: a reverse lookup is an upstream payload
+    that is cheap to lose and that a public volunteer service would rather not
+    be asked for twice.
+    """
+    return NominatimAddressSource(
+        endpoint=settings.nominatim_endpoint,
+        cache=JsonFileCache(settings.cache_path(), ttl_s=settings.cache_ttl_s),
+        min_interval_s=settings.nominatim_interval_s,
+    )
 
 
 def _collector(settings: Settings) -> TrafficCollector:

@@ -31,7 +31,8 @@ COMMON TASKS:
 - change how geometry or labels reach the GPU, or how they are drawn → `ui/static/gl.js`
 
 DEPENDENCIES:
-- none inside this repository. The block talks to a tile source over HTTP and to WebGL2; it imports no other block.
+- no imports from other blocks. The block talks to a tile source over HTTP and to WebGL2.
+- the navigation server, over HTTP only: `/api/v1/*` is forwarded to `NAV_SERVER_URL` by `ui/view.py` (route, address, probes). The page follows the driver with `ui/static/gps.js` + `driver.js` + `overlay.js`; see README "The driver".
 
 OPTIONAL CONTEXT:
 - `README.md` — what is deliberately specialised here, and what is deliberately still missing.

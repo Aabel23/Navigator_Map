@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -8,6 +8,7 @@
 </head>
 <body>
   <canvas id="gl"></canvas>
+  <canvas id="overlay" aria-hidden="true"></canvas>
 
   <pre id="hud" class="hidden"></pre>
   <button id="hud-toggle" type="button" title="Pipeline stats" aria-label="Pipeline stats">i</button>
@@ -16,7 +17,25 @@
     <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
     <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">&minus;</button>
     <button id="recenter" type="button" title="Back to start" aria-label="Back to start">&#9678;</button>
+    <button id="locate" type="button" data-state="off" title="Vị trí của tôi" aria-label="Vị trí của tôi">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" fill="currentColor"/>
+        <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
   </div>
+
+  <section id="sheet" aria-live="polite">
+    <div id="address">Bấm nút định vị để đọc vị trí từ GPS</div>
+    <div id="fix-meta"></div>
+    <div id="gps-status" hidden></div>
+    <div id="trip" hidden>
+      <div id="trip-summary"></div>
+      <button id="trip-clear" type="button">Huỷ</button>
+    </div>
+    <label id="share"><input id="share-probes" type="checkbox"> Gửi tốc độ ẩn danh để cải thiện dữ liệu giao thông</label>
+  </section>
 
   <div id="attribution"></div>
 

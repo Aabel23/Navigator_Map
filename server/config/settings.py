@@ -51,6 +51,10 @@ class Settings:
         cache_ttl_s: How long a cached upstream response stays usable.
         default_area: The box used when a request does not name one.
         overpass_endpoint, overpass_timeout_s: The free OSM road source.
+        nominatim_endpoint, nominatim_interval_s: The free OSM reverse
+            geocoder, and the shortest gap between two requests to it. The
+            public instance allows one per second; a self-hosted one can
+            set zero.
         route_pad_degrees: How far outside the endpoints roads are loaded.
         route_snap_radius_m: How far an endpoint may be from a road.
         graph_cache_size: How many built graphs to keep in memory.
@@ -80,6 +84,8 @@ class Settings:
     default_area: str = DEFAULT_AREA
     overpass_endpoint: str = "https://overpass-api.de/api/interpreter"
     overpass_timeout_s: int = 30
+    nominatim_endpoint: str = "https://nominatim.openstreetmap.org/reverse"
+    nominatim_interval_s: float = 1.0
 
     route_pad_degrees: float = 0.02
     route_snap_radius_m: float = 250.0
@@ -134,6 +140,8 @@ class Settings:
             raise SettingsError("route_pad_degrees must not be negative")
         if self.route_snap_radius_m <= 0:
             raise SettingsError("route_snap_radius_m must be positive")
+        if self.nominatim_interval_s < 0:
+            raise SettingsError("nominatim_interval_s must not be negative")
         if self.graph_cache_size < 1:
             raise SettingsError("graph_cache_size must be at least 1")
         if self.traffic_max_age_s <= 0:

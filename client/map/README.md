@@ -85,6 +85,51 @@ classes get icons is a table row — no shader change, no extra draw call. Style
 names are resolved to indices once at start-up, so a typo is a start-up error
 rather than a silently missing class or label.
 
+## The driver: real GPS, address, route, probes
+
+The basemap is the bulk of this block, but the page also follows the driver:
+
+| What | How | Where |
+|---|---|---|
+| **Position** | `navigator.geolocation.watchPosition`, high accuracy. Fixes worse than `NAV_GPS_MAX_ACCURACY_M` are held back; a missing speed or heading is derived from two fixes only when they are further apart than the receiver's own error | [`gps.js`](ui/static/gps.js) |
+| **Address** | `GET /api/v1/mapdata/address?point=lon,lat` on the server (OSM Nominatim, cached, ≤ 1 req/s upstream). Asked again only after moving `NAV_ADDRESS_MIN_MOVE_M` | [`driver.js`](ui/static/driver.js) |
+| **Route** | Tap the map: `POST /api/v1/route` from the current fix to the tapped point. Double-tap still zooms | [`driver.js`](ui/static/driver.js), [`app.js`](ui/static/app.js) |
+| **Probes** | Anonymous `POST /api/v1/ingest/probes`, batched every 15 s, one per 2 s at most. A checkbox on the page turns it off per device | [`gps.js`](ui/static/gps.js) `ProbeUploader` |
+| **Drawing** | Position dot, accuracy circle, heading arrow, route and destination pin on a 2D canvas over the WebGL one | [`overlay.js`](ui/static/overlay.js) |
+
+The page never calls the server directly: `/api/v1/*` on this block is
+forwarded to `NAV_SERVER_URL` (default `http://127.0.0.1:8000`) by
+[`ui/view.py`](ui/view.py). One origin is what makes the next section one
+command.
+
+### On a phone, through Cloudflare Tunnel
+
+A browser only hands out GPS to a **secure** page — HTTPS, or `localhost`. A
+phone opening `http://192.168.x.x:1520` gets no prompt and no position. A free
+Cloudflare quick tunnel gives the page an HTTPS address with no account:
+
+```bash
+# terminal 1 — the navigation server
+cd server && python main.py
+
+# terminal 2 — this page (proxies /api/v1 to the server)
+cd client/map && python main.py
+
+# terminal 3 — HTTPS for the phone
+cloudflared tunnel --url http://127.0.0.1:1520
+```
+
+`cloudflared` prints `https://<random-words>.trycloudflare.com`. Open that on
+the phone, tap the locate button (bottom of the right-hand column), allow
+location, and the address appears under the map. Tap anywhere to route there.
+`cloudflared` is a single binary — `brew install cloudflared`, `winget install
+Cloudflare.cloudflared`, or the `.deb` from Cloudflare's releases page.
+
+The quick-tunnel address changes on every run and anyone with it can reach the
+page; for a fixed name, use a named tunnel on a domain in your Cloudflare
+account. The server's API has no authentication — keep the tunnel pointed at
+this page, not at the server, and stop it when you are done.
+
 ## What is deliberately not here
 
 **No pitch, no bearing, no 3D buildings.** The camera is flat and
@@ -109,7 +154,7 @@ planned milestone.
 
 ## Verifying it
 
-Five offline, deterministic suites — no network, no browser:
+Six offline, deterministic suites — no network, no browser:
 
 ```bash
 node tests/test_earcut.mjs      # triangulation
@@ -117,6 +162,7 @@ node tests/test_lines.mjs       # polyline extrusion, label line-anchors
 node tests/test_mvt_decode.mjs  # decode, classify, LOD, projection, label records
 node tests/test_glyphs.mjs      # SDF glyph-range decoding
 node tests/test_labels.mjs      # text/icon shaping, vertex emission, collision
+node tests/test_gps.mjs         # positions -> fixes -> probes, derived speed, upload retry
 ```
 
 They assert properties rather than recorded numbers. The triangulator is
@@ -140,7 +186,7 @@ config/
 ├── config.py                tile source, cache, prefetch, simplification, glyph/sprite endpoints
 └── style.py                 colours, widths, per-class zoom gates, layer rules, label styles/rules
 ui/
-├── view.py                  Flask: /, /api/config
+├── view.py                  Flask: /, /api/config, and /api/v1/* forwarded to the server
 ├── templates/index.html     the page shell -- one canvas, one HUD, no inline script or style
 └── static/
     ├── app.css              page chrome only; it cannot change what the map looks like
@@ -156,6 +202,9 @@ ui/
     ├── labels.js            text/icon shaping into quads; vertex emission
     ├── collision.js         the placement grid and rotated-box bounds
     ├── placement.js         per-frame: cull, measure, prioritise, collide, shape, upload
+    ├── gps.js               Geolocation -> fixes; probe batching and upload
+    ├── driver.js            follow, address lookup, tap-to-route, probe opt-out
+    ├── overlay.js           position, accuracy, route and destination, on a 2D canvas
     └── gl.js                buckets + label meshes, uniform-block styling, append/evict, the draw
 tests/
 ├── fixtures/tiny.pbf
@@ -163,5 +212,6 @@ tests/
 ├── test_lines.mjs
 ├── test_mvt_decode.mjs
 ├── test_glyphs.mjs
-└── test_labels.mjs
+├── test_labels.mjs
+└── test_gps.mjs
 ```
