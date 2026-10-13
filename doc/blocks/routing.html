@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>routing — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html" class="active"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>routing</h1>
+    <p class="lead">Bộ máy tìm đường. Nhận một đồ thị và một bảng giá, trả về tuyến đường tốt nhất cùng các bước rẽ. Không biết dữ liệu từ đâu, không biết giá do ai định.</p>
+    <div class="badges"><span class="badge badge-brand">Hợp đồng v1.0</span><span class="badge badge-good">207 bài kiểm thử</span><span class="badge badge-good">Không gọi API ngoài</span><span class="badge badge-neutral">Chỉ thư viện chuẩn Python</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Cho một đồ thị đường sá và một bảng giá, tìm đường đi tốt nhất.</strong>
+Chấm hết. Nó không quyết định một con đường “đắt” bao nhiêu, không biết dữ liệu
+đường đến từ đâu, không biết tài xế đang ở đâu, và không biết tuyến đường sẽ được
+vẽ hay đọc lên như thế nào.</p>
+
+<div class="plain">
+  <span class="plain-tag">Ví von cho người mới</span>
+  <p>Hãy hình dung một người rất giỏi tìm đường nhưng bị bịt mắt. Bạn đưa cho anh
+  ta một <em>sơ đồ</em> các ngã tư được đánh số, một <em>bảng giá</em> ghi đi từ
+  ngã tư 12 sang ngã tư 13 mất bao nhiêu giây, và bảo: “tìm đường từ ngã tư 5 đến
+  ngã tư 88”. Anh ta trả lời hoàn hảo.</p>
+  <p>Nhưng nếu bạn đưa anh ta một <em>toạ độ GPS</em>, anh ta sẽ từ chối — anh ta
+  không biết toạ độ đó là ngã tư nào. Việc quy toạ độ về ngã tư là của người khác
+  (khối <a href="mapdata.html">mapdata</a>). Đó không phải sự lười biếng: nếu hai
+  chỗ trong hệ thống cùng làm việc quy đổi này, sẽ có hai câu trả lời khác nhau
+  về việc tài xế đang đứng ở đâu.</p>
+</div>
+
+<h2>2. Hai “hợp đồng đầu vào”, và vì sao phải có hai</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th></th><th><code>RouteQuery</code></th><th><code>RouteRequest</code></th></tr></thead>
+<tbody>
+<tr><th>Là gì</th><td>thứ mà client thật sự có trong tay</td><td>thứ mà bộ máy thật sự cần</td></tr>
+<tr><th>Điểm đầu / cuối</th><td>toạ độ kinh–vĩ độ</td><td><strong>mã số nút</strong> trong đồ thị</td></tr>
+<tr><th>Kèm theo</th><td>điểm dừng, loại xe, tiêu chí, giờ khởi hành</td><td>đồ thị đã nạp, mô hình chi phí, ràng buộc</td></tr>
+<tr><th>Ai tạo ra</th><td><code>api</code>, từ JSON</td><td><code>routing/service.py</code>, và chỉ nơi đó</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>File <code>service.py</code> là <em>nơi duy nhất</em> biến cái thứ nhất thành
+cái thứ hai. Và cả hai đều không biết HTTP tồn tại.</p>
+
+<h2>3. Đầu vào — Đầu ra</h2>
+
+<h3>Nhận vào</h3>
+<ul>
+  <li><code>RouteQuery</code> hoặc <code>RouteRequest</code> (bảng trên)</li>
+  <li><code>RoadGraph</code> — các nút, các cạnh, các lệnh cấm rẽ. Dùng chung, chỉ đọc</li>
+  <li><code>CostModel</code> — giá mỗi cạnh, giá mỗi lần rẽ, thời gian di chuyển</li>
+</ul>
+
+<h3>Trả ra</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Trường</th><th>Nghĩa</th></tr></thead>
+<tbody>
+<tr><td><code>geometry</code></td><td>Chuỗi toạ độ để vẽ. <strong>Chính trường này</strong> khiến việc vẽ một tuyến đường không cần chạm vào dữ liệu đường sá.</td></tr>
+<tr><td><code>steps</code></td><td>Các bước rẽ: hành động, tên phố, khoảng cách, thời gian, hướng trước/sau</td></tr>
+<tr><td><code>segments</code>, <code>nodes</code></td><td>Danh sách mã đoạn và mã nút đã đi qua</td></tr>
+<tr><td><code>distance</code></td><td>Mét</td></tr>
+<tr><td><code>travel_time</code></td><td>Giây — <em>giây thật</em>. Đây là thứ dùng để tính giờ đến.</td></tr>
+<tr><td><code>total_cost</code></td><td>Con số thuật toán tối thiểu hoá. <strong>Không được công bố ra API.</strong></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Khi thất bại, <strong>chỉ</strong> có <code>RoutingError</code> thoát ra ngoài:
+<code>InvalidRequest</code> (yêu cầu sai), <code>UnknownNode</code> (không có nút đó),
+<code>NoRouteFound</code> (hai đầu tồn tại nhưng không có đường hợp lệ nối chúng).
+Không có ngoại lệ nào khác lọt ra — đó là cam kết trong hợp đồng.</p>
+
+<h2>4. Nối với ai?</h2>
+
+<pre class="diagram">      mapdata ──┐
+                │   graph_for(khu vực) ──▶ đồ thị + hàm snap
+      traffic ──┤   multipliers_for(khu vực) ──▶ {mã đoạn: hệ số}
+                │
+    roadstate ──┘   blocked_edges(khu vực) ──▶ tập mã đoạn bị cấm
+                    multipliers_for(khu vực) ──▶ {mã đoạn: hệ số}
+                             │
+                             ▼
+                       ┌──────────┐
+                       │ routing  │  ◀── KHÔNG import khối nào cả
+                       └────┬─────┘
+                            │  Route
+                            ▼
+                           api</pre>
+
+<p>Ba thứ routing cần được khai báo trong <code>providers.py</code> dưới dạng
+<code>typing.Protocol</code> — tức là “bất cứ ai có hàm tên như thế này thì dùng
+được”. Nhờ vậy <code>mapdata</code>, <code>traffic</code>, <code>roadstate</code>
+thoả mãn chúng mà routing <strong>không import bất kỳ khối nào</strong>.</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Protocol</th><th>Hàm</th><th>Trả về</th><th>Ai thoả mãn</th></tr></thead>
+<tbody>
+<tr><td><code>MapGraphProvider</code></td><td><code>graph_for(area)</code></td>
+<td><code>GraphView</code>: <code>.graph</code>, <code>.nearest_node()</code></td>
+<td><code>mapdata.RoadGraphProvider</code></td></tr>
+<tr><td><code>TrafficCostProvider</code></td><td><code>multipliers_for(area)</code></td>
+<td><code>{mã đoạn: số}</code>, mỗi số ≥ 1.0</td><td><code>traffic.TrafficCostSource</code></td></tr>
+<tr><td rowspan="2"><code>RoadStateProvider</code></td><td><code>blocked_edges(area)</code></td>
+<td><code>frozenset[mã đoạn]</code></td><td rowspan="2"><code>roadstate.RoadStateSource</code></td></tr>
+<tr><td><code>multipliers_for(area)</code></td><td><code>{mã đoạn: số}</code>, mỗi số ≥ 1.0</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+  <strong>Đây cũng là câu trả lời cho “bộ máy không được biết dữ liệu nằm ở SQLite
+  hay PostgreSQL hay Redis hay một file”.</strong>
+  <p>Nhìn vào ba chữ ký hàm ở trên: không có chỗ nào để diễn đạt điều đó cả.</p>
+</div>
+
+<h2>5. Có gọi API bên ngoài không?</h2>
+
+<div class="note good">
+  <strong>Không. Một dòng cũng không.</strong>
+  <p>Khối này không mở socket, không đọc đĩa, không đọc biến môi trường, không
+  xem đồng hồ (trừ khi được truyền giờ khởi hành vào). Nó là toán học thuần tuý
+  trên dữ liệu được đưa cho. Chính vì thế nó có bộ kiểm thử hợp đồng riêng chạy
+  trong 3,5 giây mà không cần mạng.</p>
+</div>
+
+<h2>6. Các file trong thư mục và nhiệm vụ từng file</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Toàn bộ mặt tiền công khai. Mọi thứ với tới được từ đây là hợp đồng; mọi thứ khác là nội bộ. Người dùng phải <code>from routing import ...</code>, không bao giờ <code>from routing.search import ...</code>.</span></div>
+<div class="row"><span class="f">service.py</span><span class="d"><strong>Cửa vào tầng ứng dụng.</strong> Nhận <code>RouteQuery</code>, chọn khu vực, gọi mapdata lấy đồ thị, snap hai đầu, gom chi phí từ traffic + roadstate, lấy danh sách đoạn cấm, rồi mới gọi bộ máy. Cũng là nơi ghép các chặng khi có điểm dừng.</span></div>
+<div class="row"><span class="f">providers.py</span><span class="d">Ba <code>Protocol</code> mô tả <em>routing cần gì</em>, diễn đạt theo nhu cầu chứ không theo ai cung cấp.</span></div>
+<div class="row"><span class="f">router.py</span><span class="d">Kiểm tra yêu cầu hợp lệ, chọn mô hình chi phí và hàm ước lượng, rồi gọi tìm kiếm. Bọc mọi ngoại lệ lạ thành <code>RoutingError</code>.</span></div>
+<div class="row"><span class="f">search.py</span><span class="d">Thuật toán A* thật sự. Trạng thái là cặp <code>(cạnh vừa đi, nút đang đứng)</code> — xem mục 8.</span></div>
+<div class="row"><span class="f">assemble.py</span><span class="d">Biến một dãy nút thành thứ con người dùng được: hình học vẽ được, các bước rẽ đã gộp, quãng đường, thời gian.</span></div>
+<div class="row"><span class="f">graph.py</span><span class="d">Giao diện <code>RoadGraph</code> (ai cũng cài được) và một bản cài sẵn bằng từ điển, <code>InMemoryRoadGraph</code>.</span></div>
+<div class="row"><span class="f">costs.py</span><span class="d">Họ <code>CostModel</code>: tĩnh, động (nhân hệ số), theo hàm. Kèm <code>VehicleProfile</code> — xe tải không đi được ngõ nhỏ.</span></div>
+<div class="row"><span class="f">constraints.py</span><span class="d">Luật cấm theo từng yêu cầu: tránh đoạn này, tránh nút kia, tránh đường thu phí, tránh loại đường.</span></div>
+<div class="row"><span class="f">models.py</span><span class="d">Các kiểu dữ liệu: <code>Node</code>, <code>Edge</code>, <code>TurnRestriction</code>, <code>RouteRequest</code>, <code>Route</code>, <code>RouteStep</code>. Tất cả bất biến.</span></div>
+<div class="row"><span class="f">heuristics.py</span><span class="d">Hàm ước lượng cho A*. <em>Nội bộ</em> — có thể đổi bất cứ lúc nào.</span></div>
+<div class="row"><span class="f">geometry.py</span><span class="d">Haversine, hướng la bàn, góc rẽ. Toán thuần tuý.</span></div>
+<div class="row"><span class="f dir">bench/</span><span class="d">So A* với Dijkstra trên cùng dữ liệu.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">207 bài, gồm bộ kiểm thử hợp đồng <code>tests/contract/test_v1.py</code>.</span></div>
+<div class="row"><span class="f">contract.md</span><span class="d">Phát biểu chính xác các bảo đảm phiên bản 1.0 — và bộ test ở trên là thứ chứng minh chúng.</span></div>
+</div>
+
+<h2>7. Các file phối hợp với nhau ra sao</h2>
+
+<pre class="diagram">POST /api/v1/route
+    │
+    ▼  api/routes/route.py        phân tích, gọi, tuần tự hoá. Ba câu lệnh
+RouteQuery
+    │
+    ▼  service.py  RoutingService.route()
+    │     1. khu vực = hình chữ nhật bao hai đầu + đệm
+    │     2. đồ thị  = MapGraphProvider.graph_for(khu vực)        [mapdata]
+    │     3. hai nút = view.nearest_node(điểm)  cho mỗi đầu       [mapdata]
+    │     4. chi phí = DynamicCostModel(tĩnh, gộp(traffic, roadstate))
+    │     5. cấm     = RoadStateProvider.blocked_edges(khu vực)
+    ▼
+RouteRequest  (mã nút, đồ thị đã nạp, mô hình chi phí, ràng buộc)
+    │
+    ▼  router.py       kiểm tra, chọn mô hình chi phí + hàm ước lượng
+    ▼  search.py       A* trên trạng thái (cạnh vừa đi, nút)
+    │                    graph.py trả lời "từ nút này đi được đâu, rẽ có hợp lệ không"
+    │                    heuristics.py cho cận dưới của quãng còn lại
+    ▼  assemble.py     dãy nút -> hình học + các bước rẽ đã gộp + quãng + thời gian
+    ▼
+Route
+    │
+    ▼  api/schemas/route.py       -> JSON, kinh độ trước</pre>
+
+<h2>8. Thuật toán và kỹ thuật</h2>
+
+<h3>8.1 A* — tìm đường có định hướng</h3>
+
+<div class="plain">
+  <span class="plain-tag">Giải thích cho người mới</span>
+  <p>Thuật toán <strong>Dijkstra</strong> giống như đổ một vũng nước ở điểm xuất
+  phát rồi để nó lan đều ra mọi hướng cho đến khi chạm đích. Nó luôn đúng, nhưng
+  lãng phí: nó lan cả về hướng ngược với đích.</p>
+  <p><strong>A*</strong> thêm một câu hỏi: “nếu từ đây bay thẳng tới đích thì
+  <em>ít nhất</em> mất bao lâu?”. Con số ước lượng đó đẩy việc tìm kiếm về đúng
+  hướng, nên nó xét ít ngã tư hơn.</p>
+</div>
+
+<div class="note warn">
+  <strong>Ước lượng phải “không bao giờ nói quá”.</strong>
+  <p>Điều kiện sống còn của A* là hàm ước lượng không được lớn hơn chi phí thật
+  còn lại (tiếng Anh gọi là <em>admissible</em>). Nếu nó nói quá, A* vẫn chạy,
+  vẫn trả về một tuyến — chỉ là <em>không còn là tuyến tốt nhất nữa</em>, và
+  không có lỗi nào được báo.</p>
+  <p>Đây chính là lý do mọi hệ số nhân trong hệ thống bắt buộc ≥ 1.0. Một hệ số
+  0.8 nghĩa là “đoạn này nhanh hơn tốc độ thoáng của chính nó”, và ước lượng dựa
+  trên tốc độ thoáng lập tức trở thành nói quá.</p>
+</div>
+
+<h3>8.2 Trạng thái là <em>(cạnh vừa đi, nút)</em>, không phải chỉ <em>nút</em></h3>
+
+<p>Đây là chi tiết kỹ thuật quan trọng nhất trong <code>search.py</code>. Một
+thuật toán tìm đường ngây thơ ghi nhớ “tôi đã tới nút 42”. Ở đây nó ghi nhớ
+“tôi đã tới nút 42 <em>bằng cách đi qua đoạn số 17</em>”.</p>
+
+<p>Vì sao? Vì có hai thứ chỉ diễn đạt được khi biết mình <em>vừa từ đâu tới</em>:</p>
+<ul>
+  <li><strong>Cấm rẽ.</strong> “Từ đường Lê Lợi không được rẽ trái vào Nguyễn Huệ”
+  là một luật về <em>cặp</em> đoạn đường, không phải về một nút.</li>
+  <li><strong>Cấm quay đầu.</strong> Chỉ biết được là quay đầu nếu biết đoạn vừa đi.</li>
+</ul>
+
+<h3>8.3 Chi phí <em>không</em> được nhúng vào đồ thị</h3>
+
+<p>Một <code>Edge</code> chỉ lưu <strong>sự thật</strong>: dài bao nhiêu mét, tốc
+độ thoáng bao nhiêu, thuộc loại đường gì, tên gì, hình dạng ra sao. Còn
+<code>CostModel</code> mới quyết định những sự thật đó <em>đáng giá bao nhiêu</em>
+với chiếc xe này, vào lúc này.</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Mô hình</th><th>Làm gì</th></tr></thead>
+<tbody>
+<tr><td><code>StaticCostModel</code></td><td>Hai chế độ: <code>fastest</code> (nhanh nhất) và <code>shortest</code> (ngắn nhất)</td></tr>
+<tr><td><code>DynamicCostModel</code></td><td>Bọc mô hình tĩnh và nhân thêm hệ số theo từng đoạn. <strong>Đây là khe cắm duy nhất</strong> mà điều kiện thực tế đi vào thuật toán.</td></tr>
+<tr><td><code>VehicleProfile</code></td><td>Xe nào đi được loại đường nào, hệ số tốc độ, mức phạt theo loại đường</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>8.4 Khi traffic và roadstate cùng nói về một đoạn</h3>
+
+<p>Lấy giá trị <strong>tệ hơn</strong>, không nhân hai hệ số với nhau.</p>
+
+<div class="plain">
+  <p>Một con đường ngập thì chậm <em>bởi vì</em> nó ngập. Nhân hai hệ số lại là
+  tính tiền tài xế hai lần cho một sự kiện chỉ vô tình được quan sát bởi hai
+  nguồn khác nhau.</p>
+</div>
+
+<h3>8.5 Điểm dừng giữa đường</h3>
+
+<p>Mỗi chặng được tìm riêng rồi ghép lại trong <code>service.py</code>: bỏ ngã tư
+bị lặp khỏi <code>nodes</code>, bỏ toạ độ bị lặp khỏi <code>geometry</code>, cộng
+dồn quãng đường và thời gian. Riêng <code>steps</code> thì <em>giữ nguyên</em> —
+mỗi chặng kết thúc bằng một bước “đến nơi” và chặng sau bắt đầu bằng “khởi hành”,
+vì đó đúng là điều xảy ra khi bạn dừng lại giữa đường.</p>
+
+<p>Một chuyến chỉ có một chặng được trả về <em>giống hệt từng byte</em> với thứ bộ
+máy tạo ra, vì bảo đảm về tính tất định được phát biểu trên chính đối tượng đó.</p>
+
+<h2>9. Ví dụ thật</h2>
+
+<h3>Gọi API</h3>
+<pre><code>POST /api/v1/route
+<span class="s">{
+  "origin":      [106.69359, 10.78122],
+  "destination": [106.70119, 10.78295],
+  "profile":     "car",
+  "cost_mode":   "fastest",
+  "use_traffic": true
+}</span></code></pre>
+
+<h3>Trả về (rút gọn)</h3>
+<pre><code><span class="s">{
+  "status": "ok",
+  "distance_m": 1317.3,
+  "duration_s": 285.0,
+  "cost_mode": "fastest",
+  "profile": "car",
+  "geometry": { "type": "LineString", "coordinates": [[106.69359, 10.78122], ...] },
+  "steps": [
+    { "maneuver": "depart",   "name": "Nam Kỳ Khởi Nghĩa", "distance_m": 159.0 },
+    { "maneuver": "left",     "name": "Lý Tự Trọng",        "distance_m": 322.0 },
+    { "maneuver": "right",    "name": "Đồng Khởi",          "distance_m": 210.0 },
+    { "maneuver": "left",     "name": "Mạc Thị Bưởi",       "distance_m": 180.0 },
+    ...
+    { "maneuver": "arrive",   "name": "",                   "distance_m": 0.0 }
+  ],
+  "meta": { "traffic_used": true, "traffic_refreshed": true, "waypoints": 0 }
+}</span></code></pre>
+
+<h3>Cùng chuyến đi, tắt tính kẹt xe</h3>
+<pre><code><span class="c"># "use_traffic": false</span>
+distance_m: 1291.0      duration_s: 90.1
+
+<span class="c"># Kẹt xe khiến chuyến đi lâu hơn 195 giây — hơn gấp ba lần.
+# Đôi khi tuyến đường cũng đổi hẳn sang con phố khác.</span></code></pre>
+
+<h3>Số liệu hiệu năng, đo trên đồ thị thật của Quận 1</h3>
+<pre><code>đồ thị:     5140 way nguồn -> 6182 nút, 8062 cạnh
+tìm đường:  ~0.03 giây khi đồ thị đã nằm sẵn trong bộ nhớ
+kiểm thử:   207 bài cho riêng khối này, gồm bộ hợp đồng v1.0</code></pre>
+
+<h2>10. Những gì tuyệt đối không được chạm vào</h2>
+
+<p>Người dùng khối này chỉ được <code>from routing import ...</code>. Những thứ
+sau là nội bộ và có thể đổi bất cứ lúc nào mà không cần tăng số phiên bản hợp đồng:</p>
+
+<ul>
+  <li><code>routing.search</code> — thuật toán, cách biểu diễn trạng thái, hàng đợi</li>
+  <li><code>routing.assemble</code> — cách một dãy nút biến thành hình học và các bước</li>
+  <li><code>routing.heuristics</code> — chọn hàm ước lượng, cách nhớ đệm, cận</li>
+  <li><code>Route.nodes_expanded</code> — một tín hiệu để đo hiệu năng, không phải lời hứa</li>
+  <li>Tuyến nào được chọn khi có nhiều tuyến chi phí bằng nhau</li>
+  <li><code>tests/</code>, <code>bench/</code> — không bao giờ được import từ mã sản phẩm</li>
+</ul>
+
+<h2>11. Những điều dễ hiểu nhầm</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Hiểu nhầm</th><th>Thực tế</th></tr></thead>
+<tbody>
+<tr><td>“Routing lấy dữ liệu đường từ OpenStreetMap”</td>
+<td>Không. Nó <em>được đưa</em> một đồ thị. Việc lấy dữ liệu là của <a href="mapdata.html">mapdata</a>.</td></tr>
+
+<tr><td>“Routing biết đường nào đang kẹt”</td>
+<td>Không. Nó nhận một bảng <code>{mã đoạn: hệ số}</code> và không biết con số đó nghĩa là gì hay từ đâu ra.</td></tr>
+
+<tr><td>“Gửi toạ độ vào là được”</td>
+<td>Chỉ đúng ở tầng <code>service.py</code>. Bản thân bộ máy chỉ nhận mã nút.</td></tr>
+
+<tr><td>“<code>total_cost</code> là thời gian”</td>
+<td>Không. Nó là đại lượng thuật toán tối thiểu hoá, có thể đã bị nhân hệ số ưu tiên. Thời gian là <code>travel_time</code> → <code>duration_s</code>.</td></tr>
+
+<tr><td>“Toạ độ trong routing là kinh độ trước”</td>
+<td>Ngược lại — bên trong routing là <strong>vĩ độ trước</strong>, vì hợp đồng của nó nói vậy. Chỗ đổi duy nhất nằm ở <code>mapdata/graph/build.py</code>.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>12. Giới hạn đã biết</h2>
+
+<ul>
+  <li><strong>A* gần như hoà với Dijkstra ở chế độ <code>fastest</code>.</strong>
+  Cận dưới phải chia cho tốc độ nhanh nhất của toàn đồ thị, mà con số đó rất lỏng
+  khi tốc độ các đường chênh nhau nhiều. A* luôn xét ít trạng thái hơn, và nhanh
+  hơn rõ rệt ở chế độ <code>shortest</code>. Muốn siết chặt thì cần cận tốc độ
+  theo vùng, hoặc kỹ thuật landmark.</li>
+  <li><strong>Chỉ trả về một tuyến.</strong> Chưa có tuyến thay thế.</li>
+  <li><strong>Chưa có map matching theo thời gian.</strong> Routing nhận mã nút;
+  việc bám một tài xế <em>đang di chuyển</em> vào mạng lưới theo thời gian chưa
+  được xây.</li>
+  <li><strong>Tính hợp lệ chỉ đúng “theo những gì đồ thị khai báo”.</strong> Đồ
+  thị hiện tại dựng từ Overpass <code>out geom</code>, chỉ hỏi các <em>way</em>,
+  nên chưa mang quan hệ cấm rẽ của OSM.</li>
+</ul>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

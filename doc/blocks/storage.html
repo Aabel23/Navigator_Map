@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>storage — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html" class="active"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>storage</h1>
+    <p class="lead">Lưu và tìm lại các byte, và quyết định cỗ máy nào làm việc đó. Không được biết những byte đó nghĩa là gì.</p>
+    <div class="badges"><span class="badge badge-good">78 bài kiểm thử</span><span class="badge badge-brand">SQLite + bộ nhớ</span><span class="badge badge-neutral">PostgreSQL: có kế hoạch, chưa có mã</span><span class="badge badge-bad">Nơi duy nhất có sqlite3</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Sở hữu cách các byte được cất đi và tìm lại, và cỗ máy nào làm việc đó.</strong>
+Nó cung cấp <em>năng lực lưu trữ</em>, và không đưa ra một quyết định nghiệp vụ nào.</p>
+
+<div class="note bad">
+  <strong>Khối này không được biết một con đường, một số đo hay một lệnh cấm <em>là gì</em>.</strong>
+  <p>Nếu có một cột <code>road_class</code> trong bảng, thì đó là một mẩu chính
+  sách của <code>mapdata</code> đang sống trong tầng cơ sở dữ liệu — và lần sau ai
+  đó sửa lớp dữ liệu đó, việc sửa sẽ biến thành một cuộc di chuyển lược đồ.</p>
+</div>
+
+<div class="plain">
+  <span class="plain-tag">Ví von cho người mới</span>
+  <p>Hãy hình dung một kho gửi đồ ở nhà ga. Người giữ kho nhận một cái thùng đã
+  dán kín, ghi lên phiếu ba thứ: <em>thùng này thuộc loại nào</em>, <em>nó liên
+  quan tới vùng nào trên bản đồ</em>, và <em>nó đúng vào lúc nào</em>. Rồi cất đi.</p>
+  <p>Người giữ kho <strong>không mở thùng</strong>. Anh ta không biết bên trong là
+  bản đồ, là số liệu đo, hay là biên bản. Và chính vì thế mà đổi cả nhà kho sang
+  chỗ khác cũng không ảnh hưởng gì tới người gửi.</p>
+</div>
+
+<h2>2. Một hình dạng hàng duy nhất</h2>
+
+<pre><code>StoredDocument(
+    collection,                        <span class="c"># thuộc bộ sưu tập nào</span>
+    key,                               <span class="c"># mã riêng trong bộ đó</span>
+    west, south, east, north,          <span class="c"># phủ vùng nào trên bản đồ</span>
+    payload,                           <span class="c"># NỘI DUNG — không bao giờ được đọc</span>
+    recorded_at, valid_from, valid_to  <span class="c"># đúng vào lúc nào</span>
+)</code></pre>
+
+<p>Chỉ có hai trục mà mọi người dùng đều truy vấn theo: <strong>một vùng</strong>
+và <strong>một thời điểm</strong>. Hai trục đó đánh chỉ mục được; còn một khối
+JSON thì không. Đó là toàn bộ lý do hình dạng hàng trông như vậy.</p>
+
+<p>Mỗi khối nghiệp vụ tự đổi kiểu dữ liệu của mình thành/từ <code>payload</code>,
+ngay cạnh chính kiểu dữ liệu đó.</p>
+
+<h3>Các bộ sưu tập đang dùng</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tên</th><th>Chứa gì</th><th>Ai ghi</th></tr></thead>
+<tbody>
+<tr><td><code>roads</code></td><td>Hình học đường đã lấy về</td><td><code>mapdata</code></td></tr>
+<tr><td><code>observations</code></td><td>Số đo thô/đã chuẩn hoá cần giữ lại</td><td><code>ingest</code></td></tr>
+<tr><td><code>road_conditions</code></td><td>Đường cấm, ngập, công trình — kèm khoảng hiệu lực</td><td><code>roadstate</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>3. Hai giao diện được công bố</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Giao diện</th><th>Làm gì</th><th>Khi lỗi</th></tr></thead>
+<tbody>
+<tr><td><code>DocumentStore</code></td><td>ghi, truy vấn theo bộ sưu tập + vùng + thời điểm, xoá</td><td>ném <code>StorageError</code></td></tr>
+<tr><td><code>Cache</code></td><td>lấy/đặt một khối JSON theo khoá</td><td><strong>mọi lỗi đều là “không có”</strong></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+  <strong>Vì sao <code>Cache</code> không bao giờ ném lỗi?</strong>
+  <p>Người gọi nó luôn có cách khác để lấy câu trả lời, và chẳng có gì hữu ích để
+  làm với một lỗi đĩa. Một bộ nhớ đệm không đọc được là một bộ nhớ đệm <em>chậm
+  hơn</em>, không phải một bộ nhớ đệm <em>hỏng</em>.</p>
+</div>
+
+<h2>4. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Mặt tiền công khai duy nhất.</span></div>
+<div class="row"><span class="f dir">interface/records.py</span><span class="d"><code>StoredDocument</code>, <code>Collection</code>, <code>utcnow</code> — hàng dữ liệu <em>là gì</em>, và nơi chuẩn hoá mốc thời gian.</span></div>
+<div class="row"><span class="f dir">interface/store.py</span><span class="d"><code>DocumentStore</code>, <code>Cache</code>, <code>StorageBackend</code>, <code>StorageError</code> — một backend <em>phải làm được gì</em>. Không biết cỗ máy nào tồn tại.</span></div>
+<div class="row"><span class="f dir">memory/backend.py</span><span class="d"><code>InMemoryStorage</code>: từ điển Python. Dùng cho kiểm thử và cho <code>MAP_STORAGE_BACKEND=memory</code>.</span></div>
+<div class="row"><span class="f dir">sqlite/backend.py</span><span class="d"><code>SqliteStorage</code> — <strong>module duy nhất trong toàn server import <code>sqlite3</code></strong>.</span></div>
+<div class="row"><span class="f dir">sqlite/schema.sql</span><span class="d">Câu lệnh tạo bảng, áp dụng khi gọi <code>migrate()</code>.</span></div>
+<div class="row"><span class="f">files.py</span><span class="d"><code>JsonFileCache</code>, <code>cache_key</code> — một bộ nhớ đệm file có hạn dùng. Cố ý <em>không</em> phải một <code>StorageBackend</code>: nó không có hàng, không có bộ sưu tập, không có thời điểm.</span></div>
+<div class="row"><span class="f dir">postgres/schema.sql</span><span class="d">Lược đồ đích cho PostgreSQL/PostGIS. <strong>Không có mã nào cả.</strong></span></div>
+<div class="row"><span class="f dir">postgres/MIGRATION.md</span><span class="d">Kế hoạch chuyển đổi.</span></div>
+<div class="row"><span class="f dir">tests/test_conformance.py</span><span class="d">78 bài — <em>một</em> bộ kiểm thử chạy trên <em>ba</em> cấu hình backend.</span></div>
+</div>
+
+<h2>5. Ba quyết định kỹ thuật của bản SQLite</h2>
+
+<ul>
+  <li><strong>Mốc thời gian là chuỗi ISO-8601, luôn UTC, luôn có múi giờ</strong> —
+  được ép ngay tại ranh giới <code>StoredDocument</code>, vì SQLite không có kiểu
+  thời điểm.</li>
+  <li><strong>Nội dung là chuỗi JSON</strong>, và khối này không bao giờ đọc vào trong.</li>
+  <li><strong>Một kết nối duy nhất</strong> với <code>check_same_thread=False</code>,
+  nằm sau một khoá. Máy chủ phát triển của Flask phục vụ trên nhiều luồng, còn
+  SQLite chấp nhận truy cập tuần tự hoá.</li>
+</ul>
+
+<h2>6. Vì sao “thay được cỗ máy” là chuyện có thật, không phải lời hứa</h2>
+
+<pre class="diagram">     routing   mapdata   traffic   roadstate   ingest   api
+                            │
+                            ▼
+                   storage.StorageBackend
+                    .documents  -> DocumentStore
+                    .cache      -> Cache
+                            │
+              ┌─────────────┼─────────────┐
+              ▼             ▼             ▼
+        InMemoryStorage  SqliteStorage  (PostgresStorage)
+                                          chưa được viết</pre>
+
+<p>Không có gì phía trên <code>storage/</code> nhắc tới SQLite, một cái bảng, hay
+một câu SQL. Cỗ máy được chọn <em>một lần</em>, trong <code>api/composition.py</code>,
+từ cấu hình.</p>
+
+<div class="note good">
+  <strong>Bộ kiểm thử tuân thủ là thứ biến “thay được” thành một tính chất đã
+  chứng minh.</strong>
+  <p>78 bài chạy trên ba cấu hình: bộ nhớ, file SQLite, và SQLite trong RAM. Khi
+  bản trong bộ nhớ chấp nhận một payload mà bản SQLite từ chối, bộ test nói ra —
+  và <em>bản trong bộ nhớ được sửa lại</em>, chứ không phải bài test được nới lỏng.</p>
+</div>
+
+<h3>Chuyển sang PostgreSQL sẽ đổi những gì?</h3>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Hôm nay (SQLite)</th><th>Ngày mai (PostgreSQL/PostGIS)</th></tr></thead>
+<tbody>
+<tr><td>bốn cột <code>REAL</code> có chỉ mục</td><td>một cột <code>GEOMETRY(POLYGON, 4326)</code> với chỉ mục GiST</td></tr>
+<tr><td>chuỗi ISO</td><td><code>TIMESTAMPTZ</code></td></tr>
+<tr><td>chuỗi JSON</td><td><code>JSONB</code></td></tr>
+<tr><td>một kết nối có khoá</td><td>một pool kết nối</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Không đổi:</strong> giao diện <code>DocumentStore</code>, và do đó từng
+dòng mã của routing, traffic, roadstate, mapdata và api. Cách viết câu lệnh
+upsert vốn đã là cách của PostgreSQL — SQLite mượn lại — nên đường ghi dữ liệu
+chuyển sang gần như nguyên văn.</p>
+
+<div class="note warn">
+  <strong>Nhưng chưa có bộ điều hợp PostgreSQL nào được viết.</strong>
+  <p><code>postgres/</code> chỉ chứa lược đồ đích và kế hoạch. Lý do: hiện chưa có
+  gì trong dự án đòi hỏi nó, và thêm hạ tầng khi chưa có nhu cầu cụ thể là điều
+  bản khoá kiến trúc cấm.</p>
+</div>
+
+<h2>7. Luật được thực thi</h2>
+
+<div class="note bad">
+  <strong><code>sqlite3</code> không được import ngoài <code>storage/sqlite/</code>.</strong>
+  <p><code>server/tests/test_dependency_rules.py</code> đọc mã bằng <code>ast</code>
+  và làm hỏng build nếu điều đó thay đổi. Tương tự, không được import bất kỳ trình
+  điều khiển cơ sở dữ liệu nào ở nơi khác — không <code>psycopg</code>, không ORM.</p>
+</div>
+
+<h2>8. Ví dụ thật</h2>
+
+<pre><code><span class="k">from</span> storage <span class="k">import</span> SqliteStorage, StoredDocument, Collection
+
+backend = SqliteStorage(<span class="s">"data/server.db"</span>)
+backend.migrate()
+
+<span class="c"># mapdata lưu một con đường — nó tự chuyển RoadSegment thành payload</span>
+backend.documents.put([
+    StoredDocument(
+        collection=Collection.ROADS,
+        key=<span class="s">"osm:way/32575984"</span>,
+        west=<span class="n">106.6998</span>, south=<span class="n">10.7759</span>, east=<span class="n">106.7011</span>, north=<span class="n">10.7772</span>,
+        payload={<span class="s">"id"</span>: <span class="s">"osm:way/32575984"</span>, <span class="s">"road_class"</span>: <span class="s">"residential"</span>,
+                 <span class="s">"geometry"</span>: [[<span class="n">106.6999</span>, <span class="n">10.7761</span>], ...]},
+    )
+])
+
+<span class="c"># và đọc lại theo vùng — storage không hề biết payload nghĩa là gì</span>
+docs = backend.documents.query(Collection.ROADS, area=bbox)</code></pre>
+
+<h3>Bộ nhớ đệm cho nguồn dữ liệu</h3>
+<pre><code><span class="k">from</span> storage <span class="k">import</span> JsonFileCache, cache_key
+
+cache = JsonFileCache(<span class="s">".cache/upstream"</span>, ttl_s=<span class="n">24</span>*<span class="n">3600</span>)
+key = cache_key(bbox.as_tuple(), <span class="s">"motorway,primary,residential"</span>)
+
+payload = cache.get(key)          <span class="c"># None nếu chưa có hoặc đã quá hạn</span>
+<span class="k">if</span> payload <span class="k">is None</span>:
+    payload = goi_overpass()
+    cache.put(key, payload)       <span class="c"># thất bại thì im lặng, đúng như thiết kế</span></code></pre>
+
+<p>Trong lần chạy thật, chính bộ nhớ đệm này biến một câu hỏi tốn
+<strong>28,3 giây</strong> thành <strong>0,20 giây</strong> ở lần thứ hai.</p>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

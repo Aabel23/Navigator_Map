@@ -1,0 +1,273 @@
+/* The demo's chrome. Every selector is namespaced `nav-` and nothing here
+   redefines anything from the map block's app.css, so the basemap looks
+   exactly as the map block serves it. */
+
+#nav-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* The map owns the pointer: dragging, pinching and double-click zoom keep
+     working untouched. Picks are read off the map's own canvas. */
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── panel ──────────────────────────────────────────────────────────────── */
+
+#nav-panel {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  width: 330px;
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+}
+
+#nav-panel.nav-collapsed .nav-body { display: none; }
+
+.nav-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.nav-title { font-weight: 650; font-size: 14px; letter-spacing: 0.01em; }
+.nav-sub { font-size: 11.5px; color: #6b7580; margin-top: 1px; line-height: 1.35; }
+.nav-sub.nav-working { color: #1f6feb; }
+
+.nav-body { overflow-y: auto; padding: 2px 14px 14px; }
+
+.nav-section {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.nav-section:last-child { border-bottom: none; }
+
+.nav-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8b949e;
+  margin-bottom: 8px;
+}
+
+.nav-row { display: flex; align-items: center; gap: 7px; }
+.nav-wrap { flex-wrap: wrap; }
+
+.nav-note {
+  margin-top: 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #6b7580;
+}
+.nav-note code {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.nav-note.nav-warn { color: #b4531e; }
+
+/* ── endpoints ──────────────────────────────────────────────────────────── */
+
+.nav-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  border-radius: 9px;
+  padding: 8px 10px;
+  margin-bottom: 7px;
+  cursor: pointer;
+  font: inherit;
+  color: #2b3138;
+}
+.nav-endpoint:hover { border-color: rgba(0, 0, 0, 0.22); }
+.nav-endpoint.nav-picking {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15);
+}
+
+.nav-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+.nav-dot-origin { background: #1f6feb; }
+.nav-dot-destination { background: #c0243c; }
+
+.nav-endpoint-text { display: flex; flex-direction: column; min-width: 0; }
+.nav-endpoint-text b { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; font-weight: 600; }
+.nav-endpoint-text em {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-field { display: flex; flex-direction: column; gap: 3px; flex: 1 1 120px; }
+.nav-field span { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; }
+.nav-field select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 7px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 7px;
+  background: #fff;
+  color: #2b3138;
+}
+
+/* ── buttons ────────────────────────────────────────────────────────────── */
+
+/* No `color` here: `#nav-panel button` scores an id and would beat every
+   class rule below it, which is how a dark chip ends up with dark text on it. */
+#nav-panel button, #nav-guidance button { font: inherit; cursor: pointer; }
+
+.nav-btn, .nav-chip {
+  color: #2b3138;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 11px;
+  line-height: 1.35;
+  font-size: 13px;
+}
+.nav-chip { border-radius: 999px; font-size: 12px; padding: 5px 11px; }
+.nav-btn:hover, .nav-chip:hover { background: #f4f6f8; }
+
+.nav-primary { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 550; }
+.nav-primary:hover { background: #1a5fd0; }
+
+.nav-chip.nav-on { background: #2b3138; border-color: #2b3138; color: #fff; }
+.nav-chip.nav-on:hover { background: #3a424b; }
+
+.nav-btn[disabled], .nav-chip[disabled] { opacity: 0.42; cursor: default; }
+.nav-btn[disabled]:hover, .nav-chip[disabled]:hover { background: #fff; }
+
+.nav-ghost { border: none; background: none; font-size: 17px; line-height: 1; padding: 0 4px; color: #8b949e; }
+
+/* ── result ─────────────────────────────────────────────────────────────── */
+
+.nav-eta { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.nav-eta-main span { font-size: 27px; font-weight: 650; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.nav-eta-main small, .nav-eta-side small { display: block; font-size: 11.5px; color: #8b949e; margin-top: 2px; }
+.nav-eta-side { text-align: right; }
+.nav-eta-side span { font-size: 17px; font-weight: 550; font-variant-numeric: tabular-nums; }
+
+.nav-delta {
+  margin-top: 9px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(242, 184, 38, 0.14);
+  color: #7a5a12;
+}
+.nav-delta:empty { display: none; }
+.nav-delta b { font-variant-numeric: tabular-nums; }
+
+/* ── steps ──────────────────────────────────────────────────────────────── */
+
+.nav-steps { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+.nav-steps li {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: baseline;
+  gap: 4px 9px;
+  padding: 7px 2px;
+  border-top: 1px solid rgba(0, 0, 0, 0.055);
+}
+.nav-steps li:first-child { border-top: none; }
+.nav-steps li.nav-step-active { background: rgba(31, 111, 235, 0.09); border-radius: 7px; }
+.nav-step-icon { font-size: 16px; text-align: center; color: #1f6feb; line-height: 1.2; }
+.nav-step-name { font-size: 13px; }
+.nav-step-name .nav-unnamed { color: #8b949e; font-style: italic; }
+.nav-step-dist { font-size: 11.5px; color: #8b949e; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── legend ─────────────────────────────────────────────────────────────── */
+
+.nav-legend { display: flex; flex-wrap: wrap; gap: 5px 11px; margin-top: 9px; font-size: 11.5px; color: #6b7580; }
+.nav-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.nav-legend i { width: 11px; height: 4px; border-radius: 2px; display: inline-block; }
+
+.nav-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; }
+.nav-badge-sim { background: #f5e6c8; color: #6b5320; }
+.nav-badge-measured { background: #d8ecd9; color: #285c30; }
+
+/* ── key/value ──────────────────────────────────────────────────────────── */
+
+.nav-kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.nav-kv dt { color: #8b949e; white-space: nowrap; }
+.nav-kv dd { margin: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── guidance bar ───────────────────────────────────────────────────────── */
+
+#nav-guidance {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 18px;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  min-width: 330px;
+  max-width: min(560px, calc(100vw - 24px));
+  background: rgba(23, 27, 32, 0.94);
+  color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.34);
+}
+.nav-maneuver { font-size: 30px; line-height: 1; width: 40px; text-align: center; flex: 0 0 auto; }
+.nav-guidance-text { flex: 1 1 auto; min-width: 0; }
+.nav-guidance-primary { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-guidance-primary span:first-child { font-variant-numeric: tabular-nums; }
+.nav-guidance-secondary { font-size: 12px; color: #9aa3ad; margin-top: 2px; font-variant-numeric: tabular-nums; }
+#nav-guidance .nav-btn { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.2); color: #fff; }
+#nav-guidance .nav-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* ── toast ──────────────────────────────────────────────────────────────── */
+
+#nav-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 16px;
+  z-index: 20;
+  max-width: min(560px, calc(100vw - 24px));
+  padding: 9px 15px;
+  border-radius: 10px;
+  background: rgba(23, 27, 32, 0.93);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.3);
+}
+#nav-toast.nav-bad { background: #8d2233; }
+
+@media (max-width: 620px) {
+  #nav-panel { width: calc(100vw - 24px); max-height: 58vh; }
+  #nav-guidance { min-width: 0; left: 12px; right: 12px; transform: none; }
+}

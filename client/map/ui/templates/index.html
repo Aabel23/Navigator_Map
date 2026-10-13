@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>{{ page_title }}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <pre id="hud" class="hidden"></pre>
+  <button id="hud-toggle" type="button" title="Pipeline stats" aria-label="Pipeline stats">i</button>
+
+  <div id="controls">
+    <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">&minus;</button>
+    <button id="recenter" type="button" title="Back to start" aria-label="Back to start">&#9678;</button>
+  </div>
+
+  <div id="attribution"></div>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

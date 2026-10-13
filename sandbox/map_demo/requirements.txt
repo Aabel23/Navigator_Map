@@ -1,0 +1,5 @@
+# Flask, and whatever the server itself needs when running in-process.
+#
+# The demo adds no dependency of its own: it is a page, a static directory and
+# a passthrough. Installing the server's requirements is enough to run both.
+flask>=3.0

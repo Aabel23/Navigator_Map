@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>{{ page_title }}</title>
+  <!-- The client map block's own page chrome, unchanged. Everything the demo
+       adds is namespaced .nav-* and cannot reach into it. -->
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/demo/demo.css">
+</head>
+<body>
+  <!-- Exactly the elements client/map/ui/static/app.js expects to find. -->
+  <canvas id="gl"></canvas>
+
+  <pre id="hud" class="hidden"></pre>
+  <button id="hud-toggle" type="button" title="Pipeline stats" aria-label="Pipeline stats">i</button>
+
+  <div id="controls">
+    <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">&minus;</button>
+    <button id="recenter" type="button" title="Back to start" aria-label="Back to start">&#9678;</button>
+  </div>
+
+  <div id="attribution"></div>
+
+  <!-- The demo's own layer: above the map's canvas, never drawn into it. -->
+  <canvas id="nav-overlay"></canvas>
+
+  <!-- ── trip panel ─────────────────────────────────────────────────────── -->
+  <aside id="nav-panel">
+    <header class="nav-head">
+      <div>
+        <div class="nav-title">Navigation</div>
+        <div class="nav-sub" id="nav-link">connecting…</div>
+      </div>
+      <button id="nav-collapse" class="nav-ghost" type="button" title="Collapse">&minus;</button>
+    </header>
+
+    <div class="nav-body">
+      <section class="nav-section">
+        <button class="nav-endpoint" id="nav-pick-origin" type="button" data-pick="origin">
+          <span class="nav-dot nav-dot-origin"></span>
+          <span class="nav-endpoint-text">
+            <b>From</b>
+            <em id="nav-origin-text">click the map</em>
+          </span>
+        </button>
+        <button class="nav-endpoint" id="nav-pick-destination" type="button" data-pick="destination">
+          <span class="nav-dot nav-dot-destination"></span>
+          <span class="nav-endpoint-text">
+            <b>To</b>
+            <em id="nav-destination-text">click the map</em>
+          </span>
+        </button>
+
+        <div class="nav-row nav-wrap">
+          <label class="nav-field">
+            <span>Vehicle</span>
+            <select id="nav-profile">
+              <option value="car" selected>Car</option>
+              <option value="motorbike">Motorbike</option>
+              <option value="truck">Truck</option>
+              <option value="bicycle">Bicycle</option>
+              <option value="pedestrian">Pedestrian</option>
+            </select>
+          </label>
+          <label class="nav-field">
+            <span>Optimise</span>
+            <select id="nav-mode">
+              <option value="fastest" selected>Fastest</option>
+              <option value="shortest">Shortest</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="nav-row nav-wrap">
+          <button id="nav-go" class="nav-btn nav-primary" type="button" disabled>Get route</button>
+          <button id="nav-swap" class="nav-btn" type="button" disabled title="Swap">&#8645;</button>
+          <button id="nav-clear" class="nav-btn" type="button" disabled>Clear</button>
+        </div>
+      </section>
+
+      <section class="nav-section" id="nav-result" hidden>
+        <div class="nav-eta">
+          <div class="nav-eta-main">
+            <span id="nav-duration">—</span>
+            <small id="nav-arrival"></small>
+          </div>
+          <div class="nav-eta-side">
+            <span id="nav-distance">—</span>
+            <small id="nav-profile-echo"></small>
+          </div>
+        </div>
+        <div id="nav-delta" class="nav-delta"></div>
+        <div class="nav-row nav-wrap">
+          <button id="nav-drive" class="nav-btn nav-primary" type="button">Start drive</button>
+          <button id="nav-compare" class="nav-chip nav-on" type="button" title="Also draw the route the server computes with traffic turned off">Compare free-flow</button>
+        </div>
+      </section>
+
+      <section class="nav-section" id="nav-steps-section" hidden>
+        <div class="nav-label">Turn by turn</div>
+        <ol id="nav-steps" class="nav-steps"></ol>
+      </section>
+
+      <section class="nav-section">
+        <div class="nav-label">Layers</div>
+        <div class="nav-row nav-wrap" id="nav-layers">
+          <button class="nav-chip nav-on" type="button" data-layer="traffic">Traffic</button>
+          <button class="nav-chip" type="button" data-layer="roads">Road network</button>
+          <button class="nav-chip nav-on" type="button" data-layer="conditions">Closures</button>
+        </div>
+        <div id="nav-legend" class="nav-legend"></div>
+        <div id="nav-traffic-meta" class="nav-note"></div>
+      </section>
+
+      <section class="nav-section">
+        <div class="nav-label">Try it</div>
+        <div class="nav-row nav-wrap">
+          <button id="nav-close-road" class="nav-chip" type="button">Close a road</button>
+          <button id="nav-reopen" class="nav-btn" type="button" disabled>Reopen all</button>
+        </div>
+        <div class="nav-note">Closing a road posts an incident report to
+          <code>/api/v1/ingest/reports</code>. The server classifies it, attaches it
+          to the network, and the next route is computed around it.</div>
+      </section>
+
+      <section class="nav-section">
+        <div class="nav-label">Server</div>
+        <dl id="nav-server" class="nav-kv"></dl>
+        <div id="nav-credit" class="nav-note"></div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- ── guidance bar, while driving ────────────────────────────────────── -->
+  <div id="nav-guidance" hidden>
+    <div class="nav-maneuver" id="nav-next-icon">&#8593;</div>
+    <div class="nav-guidance-text">
+      <div class="nav-guidance-primary"><span id="nav-next-distance">—</span> <span id="nav-next-name"></span></div>
+      <div class="nav-guidance-secondary" id="nav-progress">—</div>
+    </div>
+    <button id="nav-stop" class="nav-btn" type="button">Stop</button>
+  </div>
+
+  <div id="nav-toast" hidden></div>
+
+  <!-- demo.js first: it taps the renderer's camera before the first frame. -->
+  <script type="module" src="/demo/demo.js"></script>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>config — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html" class="active"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>config</h1>
+    <p class="lead">Mọi quyết định một lần triển khai được phép đổi, đọc một lần duy nhất từ biến môi trường. Không khối nào khác đọc os.environ.</p>
+    <div class="badges"><span class="badge badge-good">20 bài kiểm thử</span><span class="badge badge-brand">Tiền tố MAP_</span><span class="badge badge-good">Mọi biến đều có mặc định chạy được</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Sở hữu mọi quyết định mà một lần triển khai được phép thay đổi</strong>,
+và biến chuỗi ký tự trong biến môi trường thành giá trị dùng được — một lần, lúc
+khởi động, tại một chỗ.</p>
+
+<div class="note good">
+  <strong>Không module nào khác đọc biến môi trường.</strong>
+  <p>Một khối tự đọc môi trường thì <em>không kiểm thử được</em> nếu không đặt biến,
+  và <em>không tìm ra được</em> nếu không grep cả kho mã.</p>
+</div>
+
+<h2>2. Những gì được công bố</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tên</th><th>Là gì</th></tr></thead>
+<tbody>
+<tr><td><code>Settings</code></td><td>Toàn bộ cấu hình, đã phân tích và kiểm tra. Bất biến.</td></tr>
+<tr><td><code>Settings.from_env()</code></td><td>Nơi <em>duy nhất</em> trong server đọc <code>os.environ</code></td></tr>
+<tr><td><code>SettingsError</code></td><td>Một giá trị sai, và thông báo <em>gọi tên biến</em> gây ra nó</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>3. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Mặt tiền công khai: <code>Settings</code>, <code>SettingsError</code>.</span></div>
+<div class="row"><span class="f">settings.py</span><span class="d">Danh sách trường, các hàm phân tích, và <code>from_env()</code>.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">20 bài.</span></div>
+</div>
+
+<p>Chỉ có một module thật. <code>settings.py</code> khai báo mỗi giá trị cấu hình
+như một trường dataclass kèm giá trị mặc định, và <code>from_env()</code> duyệt
+các trường đó, đọc <code>MAP_&lt;TÊN&gt;</code> cho từng cái, chuyển đổi, và ném
+<code>SettingsError</code> gọi tên biến nếu chuyển đổi thất bại.</p>
+
+<div class="note">
+  <strong>Thêm một tuỳ chọn cấu hình = thêm một trường.</strong>
+  <p>Không phải đăng ký ở đâu khác, và <em>danh sách trường chính là tài liệu</em>
+  — không có danh sách thứ hai để phải giữ đồng bộ.</p>
+</div>
+
+<h2>4. Các biến quan trọng nhất</h2>
+
+<p>Tất cả đều có tiền tố <code>MAP_</code>, và tất cả đều có mặc định chạy được —
+nên một bản sao mới tinh không cấu hình gì vẫn khởi động được.</p>
+
+<pre><code>MAP_STORAGE_BACKEND=sqlite      <span class="c"># hoặc memory</span>
+MAP_DATABASE_PATH=data/server.db
+MAP_DEFAULT_AREA=106.675,10.758,106.725,10.798   <span class="c"># Quận 1, TP.HCM</span>
+
+MAP_TRAFFIC_ENABLED=1           <span class="c"># định giá tuyến đường theo kẹt xe thật</span>
+MAP_TRAFFIC_SIMULATED=1         <span class="c"># mô phỏng kẹt xe ở nơi không feed nào phủ</span>
+MAP_DIGITRAFFIC_ENABLED=1       <span class="c"># feed cảm biến miễn phí của Phần Lan</span>
+MAP_ROADSTATE_ENABLED=1         <span class="c"># cho phép lệnh cấm ảnh hưởng tới tuyến đường</span></code></pre>
+
+<h2>5. Nối với ai?</h2>
+
+<pre class="diagram">  biến môi trường
+        │
+        ▼  config.Settings.from_env()      ← nơi duy nhất đọc os.environ
+        │
+        ▼  api/composition.py               ← nơi duy nhất đọc Settings
+        │
+        ▼  các giá trị được TRUYỀN XUỐNG cho từng khối
+           (không khối nào tự đi tìm cấu hình của mình)</pre>
+
+<h2>6. Bảo đảm</h2>
+
+<ul>
+  <li><strong>Giá trị sai làm hỏng ở lúc <em>khởi động</em></strong>, kèm thông báo
+  gọi tên biến — chứ không phải ở yêu cầu đầu tiên tình cờ cần đến nó. Đây chính
+  là điều <code>python main.py --check</code> tồn tại để phơi bày.</li>
+  <li><strong><code>Settings</code> là bất biến.</strong> Cấu hình không thể trôi
+  đi trong lúc tiến trình đang chạy.</li>
+</ul>
+
+<h2>7. Ví dụ thật</h2>
+
+<pre><code><span class="c"># chạy hoàn toàn trong bộ nhớ, không tạo file, tắt kẹt xe</span>
+MAP_STORAGE_BACKEND=memory MAP_TRAFFIC_ENABLED=0 python main.py --check
+
+<span class="c"># trỏ sang Helsinki, nơi có dữ liệu ĐO THẬT thay vì mô phỏng</span>
+MAP_DEFAULT_AREA=24.83,60.14,25.07,60.25 python main.py
+
+<span class="c"># một giá trị sai — hỏng ngay, và nói rõ biến nào</span>
+MAP_DEFAULT_AREA=<span class="s">"không phải hình chữ nhật"</span> python main.py --check
+<span class="c"># SettingsError: MAP_DEFAULT_AREA: expected west,south,east,north</span></code></pre>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

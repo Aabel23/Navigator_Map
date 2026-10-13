@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>{{ page_title }}</title>
+  <!-- The map block's own page chrome, unchanged. Everything the sandbox adds
+       is in sim.css and is namespaced under .sim-* so it cannot reach into it. -->
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/sim-static/sim.css">
+</head>
+<body>
+  <!-- Exactly the elements server/map/ui/static/app.js expects to find. -->
+  <canvas id="gl"></canvas>
+
+  <pre id="hud" class="hidden"></pre>
+  <button id="hud-toggle" type="button" title="Pipeline stats" aria-label="Pipeline stats">i</button>
+
+  <div id="controls">
+    <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">&minus;</button>
+    <button id="recenter" type="button" title="Back to start" aria-label="Back to start">&#9678;</button>
+  </div>
+
+  <div id="attribution"></div>
+
+  <!-- The simulator's own layer: never drawn into the map's canvas, never
+       styled by the map's CSS. -->
+  <canvas id="sim-overlay"></canvas>
+
+  <div id="sim-panel">
+    <header class="sim-head">
+      <span class="sim-title">map &middot; routing &middot; traffic</span>
+      <button id="sim-collapse" class="sim-ghost" type="button" title="Collapse">&minus;</button>
+    </header>
+
+    <div class="sim-body">
+      <section class="sim-section">
+        <div class="sim-label">Region</div>
+        <div id="sim-regions" class="sim-row sim-wrap"></div>
+        <div id="sim-region-note" class="sim-note"></div>
+      </section>
+
+      <section class="sim-section">
+        <div class="sim-label">Click on the map to set</div>
+        <div class="sim-row sim-wrap" id="sim-pickmode">
+          <button class="sim-chip sim-on" type="button" data-pick="destination">Destination</button>
+          <button class="sim-chip" type="button" data-pick="gps">Fake GPS</button>
+        </div>
+      </section>
+
+      <section class="sim-section">
+        <div class="sim-label">Fake GPS</div>
+        <div id="sim-gps" class="sim-kv"></div>
+        <div class="sim-row sim-wrap">
+          <button id="sim-drive" class="sim-btn" type="button">Drive route</button>
+          <button id="sim-noise" class="sim-chip sim-on" type="button">Noise</button>
+          <button id="sim-follow" class="sim-chip" type="button">Follow</button>
+        </div>
+      </section>
+
+      <section class="sim-section">
+        <div class="sim-label">Destination</div>
+        <div id="sim-destination" class="sim-kv"></div>
+        <div class="sim-row sim-wrap">
+          <button id="sim-clear" class="sim-btn" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="sim-section">
+        <div class="sim-label">Routes</div>
+        <div id="sim-routes"></div>
+        <div id="sim-note" class="sim-note"></div>
+      </section>
+
+      <section class="sim-section">
+        <div class="sim-label">Traffic</div>
+        <div id="sim-traffic" class="sim-kv"></div>
+        <div class="sim-row sim-wrap">
+          <button id="sim-show-traffic" class="sim-chip sim-on" type="button">Show overlay</button>
+        </div>
+        <div id="sim-legend" class="sim-legend"></div>
+        <div id="sim-credit" class="sim-note"></div>
+      </section>
+
+      <section class="sim-section">
+        <div class="sim-label">Road graph</div>
+        <div id="sim-graph" class="sim-kv"></div>
+        <div class="sim-row sim-wrap">
+          <button id="sim-rebuild" class="sim-btn" type="button">Rebuild</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- sim.js is loaded first on purpose: it installs the camera tap on the
+       map block's renderer before that renderer's first frame. -->
+  <script type="module" src="/sim-static/sim.js"></script>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

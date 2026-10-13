@@ -1,0 +1,124 @@
+/* Page chrome only. Everything inside the canvas is styled by config/style.py
+   and drawn by the renderer; nothing here can change what the map looks like.
+
+   The controls follow the shape a driver's hand expects on a phone: a column
+   at the right edge, thumb height, large enough to hit while moving. */
+
+:root {
+  --chrome-bg: rgba(255, 255, 255, 0.94);
+  --chrome-border: rgba(0, 0, 0, 0.08);
+  --chrome-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  --ink: #2b3138;
+  --ink-dim: #6b7580;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #f4f2ed;
+  color: var(--ink);
+  font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#gl {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  display: block;
+}
+
+#gl:active {
+  cursor: grabbing;
+}
+
+button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: 12px;
+  box-shadow: var(--chrome-shadow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:hover {
+  background: #ffffff;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+#controls {
+  position: fixed;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#controls button {
+  width: 48px;
+  height: 48px;
+  font-size: 22px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+#hud-toggle {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--ink-dim);
+  border-radius: 10px;
+}
+
+#hud {
+  position: fixed;
+  top: 58px;
+  left: 14px;
+  margin: 0;
+  padding: 10px 12px;
+  max-width: 320px;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: 12px;
+  box-shadow: var(--chrome-shadow);
+  color: var(--ink);
+  font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  white-space: pre;
+  pointer-events: none;
+}
+
+#hud.hidden {
+  display: none;
+}
+
+#attribution {
+  position: fixed;
+  bottom: 6px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink-dim);
+  font-size: 11px;
+}
+
+#attribution a {
+  color: var(--ink-dim);
+}

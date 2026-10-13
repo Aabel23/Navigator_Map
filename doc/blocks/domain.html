@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>domain — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html" class="active"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>domain</h1>
+    <p class="lead">Từ vựng địa lý dùng chung và phép tra 'cái gì gần đây nhất'. Đáy của đồ thị phụ thuộc — không import khối nào.</p>
+    <div class="badges"><span class="badge badge-good">24 bài kiểm thử</span><span class="badge badge-good">Không phụ thuộc gì</span><span class="badge badge-neutral">Kinh độ trước</span><span class="badge badge-brand">Sai số ≤ 25 m</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Giữ bộ từ vựng địa lý mà mọi khối khác phải nói, và phép tìm “cái gì
+gần đây nhất” mà vài khối đều cần trên dữ liệu của riêng chúng.</strong> Không gì khác.</p>
+
+<div class="plain">
+  <span class="plain-tag">Vì sao khối này tồn tại</span>
+  <p>Tầng API, các nhà cung cấp, bộ dựng đồ thị và tầng lưu trữ — tất cả đều phải
+  gọi tên <em>một vùng</em> hoặc <em>một vị trí</em>.</p>
+  <p>Ba cách viết khác nhau cho cùng một hình chữ nhật, hoặc ba lưới tìm-hàng-xóm
+  -gần-nhất tự chế, chính là cách một server bắt đầu <em>bất đồng với chính nó</em>
+  về việc nó vừa được hỏi cái gì.</p>
+</div>
+
+<h2>2. Vị trí trong hệ thống</h2>
+
+<div class="note good">
+  <strong>Đây là đáy của đồ thị phụ thuộc, và là khối duy nhất có tính chất đó.</strong>
+  <p>Nó không import khối nào, không đọc cấu hình, không đọc môi trường, không
+  đọc đĩa, không xem đồng hồ. Mọi khối khác <em>được phép</em> import nó. Chiều
+  phụ thuộc là một chiều và sẽ mãi như vậy — một <code>domain</code> mà đi import
+  một khối nghiệp vụ sẽ làm cả đồ thị trở nên có chu trình.</p>
+</div>
+
+<h2>3. Những gì được công bố</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tên</th><th>Là gì</th></tr></thead>
+<tbody>
+<tr><td><code>BBox</code></td><td>Hình chữ nhật tây/nam/đông/bắc, đơn vị độ. Mọi truy vấn đều thu hẹp về một cái</td></tr>
+<tr><td><code>GeoPoint</code></td><td>Một vị trí đã được kiểm tra hợp lệ</td></tr>
+<tr><td><code>Coord</code></td><td>Cặp <code>(kinh độ, vĩ độ)</code> thô, thứ tự GeoJSON</td></tr>
+<tr><td><code>SpatialIndex</code></td><td>Lưới tra cứu “phần tử gần nhất”, dùng được cho điểm hoặc cho đường gấp khúc</td></tr>
+<tr><td><code>haversine_m</code></td><td>Khoảng cách vòng tròn lớn giữa hai điểm, mét</td></tr>
+<tr><td><code>polyline_length_m</code></td><td>Tổng chiều dài một đường gấp khúc</td></tr>
+<tr><td><code>bounds_of</code></td><td>Hình chữ nhật bao một tập điểm</td></tr>
+<tr><td><code>densify</code>, <code>index_of_polylines</code></td><td>Chuẩn bị đường gấp khúc cho việc đánh chỉ mục</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>4. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Mặt tiền công khai; đường import duy nhất.</span></div>
+<div class="row"><span class="f">geo.py</span><span class="d"><code>BBox</code>, <code>GeoPoint</code>, <code>Coord</code>, và toán khoảng cách. Phụ thuộc vào đúng con số không.</span></div>
+<div class="row"><span class="f">spatial.py</span><span class="d"><code>SpatialIndex</code>, <code>densify</code>, <code>index_of_polylines</code>. Dựng trên <code>geo.py</code>.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">24 bài.</span></div>
+</div>
+
+<h3>Hai file phối hợp ra sao</h3>
+
+<p><code>geo.py</code> định nghĩa các kiểu giá trị và phép tính khoảng cách, và
+không phụ thuộc gì. <code>spatial.py</code> dựng lên trên đó:</p>
+
+<ul>
+  <li><code>densify</code> chặt một đường gấp khúc thành các điểm cách nhau đủ gần
+  (mặc định <code>DEFAULT_STEP_M = 50</code> m) để sai số 25 m còn đúng;</li>
+  <li><code>index_of_polylines</code> chạy việc đó trên nhiều đường và ném kết quả
+  vào một lưới ô độ;</li>
+  <li><code>SpatialIndex.nearest</code> loang ra từng vòng, dùng
+  <code>haversine_m</code> để xếp hạng ứng viên.</li>
+</ul>
+
+<h2>5. Thuật toán: lưới ô, không phải cây k-d</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tham số</th><th>Giá trị</th><th>Nghĩa</th></tr></thead>
+<tbody>
+<tr><td><code>DEFAULT_CELL_DEGREES</code></td><td>0,01°</td><td>mỗi ô khoảng 1,1 km</td></tr>
+<tr><td><code>METERS_PER_DEGREE</code></td><td>111 320</td><td>để đổi bán kính mét sang độ</td></tr>
+<tr><td><code>MAX_RINGS</code></td><td>64</td><td>giới hạn số vòng loang, tránh quét vô tận</td></tr>
+<tr><td><code>DEFAULT_STEP_M</code></td><td>50 m</td><td>bước chặt nhỏ một đường gấp khúc</td></tr>
+</tbody>
+</table>
+</div>
+
+<pre class="diagram">      tìm "ngã tư gần điểm ✕ nhất"
+
+      ┌────┬────┬────┬────┬────┐
+      │    │    │    │    │    │      vòng 2  (chỉ quét nếu vòng 1 chưa đủ)
+      ├────┼────┼────┼────┼────┤
+      │    │ ●  │    │ ●  │    │      vòng 1
+      ├────┼────┼────┼────┼────┤
+      │    │    │ ✕● │    │    │      vòng 0 — ô chứa chính điểm cần tìm
+      ├────┼────┼────┼────┼────┤
+      │    │  ● │    │    │    │
+      └────┴────┴────┴────┴────┘
+
+      dừng khi vòng tiếp theo KHÔNG THỂ gần hơn ứng viên tốt nhất đang có</pre>
+
+<p><strong>Vì sao lưới chứ không phải cây?</strong> Vì các ngã tư phân bố khá đều
+trên mặt phẳng. Đó chính là tình huống mà lưới xử lý tốt, và cây k-d chỉ làm mọi
+thứ phức tạp thêm mà không đổi lại được gì.</p>
+
+<h2>6. Bảo đảm mà người dùng có thể tin</h2>
+
+<ul>
+  <li><strong>Kinh độ đứng trước, ở mọi kiểu dữ liệu trong khối này</strong> —
+  khớp GeoJSON và khớp mọi nguồn miễn phí dự án này đọc.</li>
+  <li><strong>Kiểm tra hợp lệ ngay lúc khởi tạo.</strong> Một cặp lat/lon bị đảo,
+  hay một hình chữ nhật lộn ngược, sẽ ném lỗi <em>tại nơi nó được tạo ra</em>,
+  không phải ở ba khối sau đó.</li>
+  <li><strong>Cả hai đều bất biến.</strong> Một vùng đã trao cho một nhà cung cấp
+  không thể đổi dưới chân họ.</li>
+  <li><strong>Sai số cho đường gấp khúc chặn ở 25 mét</strong> — vì đường gấp khúc
+  được đánh chỉ mục dưới dạng các điểm đã chặt nhỏ, chứ không phải các đoạn thẳng.
+  Con số đó nằm trong mọi bán kính snap của server và nằm trong sai số vị trí của
+  chính các số đo đang dùng.</li>
+</ul>
+
+<h2>7. Ranh giới quan trọng: kiểu nào KHÔNG được đưa vào đây</h2>
+
+<div class="note warn">
+  <p>Kiểu dữ liệu <em>riêng</em> của một khối vẫn thuộc về khối đó.
+  <code>routing.Edge</code>, <code>mapdata.RoadSegment</code>,
+  <code>ingest.TrafficObservation</code> là hợp đồng của <em>chúng</em>, không phải
+  của khối này.</p>
+  <p>Chuyển một trong số đó về đây sẽ khiến mọi khối phụ thuộc vào từ vựng của mọi
+  khối khác — đúng thứ mà kiến trúc này tồn tại để ngăn lại.</p>
+</div>
+
+<h2>8. Ví dụ thật</h2>
+
+<pre><code><span class="k">from</span> domain <span class="k">import</span> BBox, GeoPoint, SpatialIndex, haversine_m
+
+<span class="c"># một hình chữ nhật — kiểm tra ngay lúc tạo</span>
+area = BBox(<span class="n">106.675</span>, <span class="n">10.758</span>, <span class="n">106.725</span>, <span class="n">10.798</span>)   <span class="c"># tây, nam, đông, bắc</span>
+BBox(<span class="n">106.9</span>, <span class="n">10.758</span>, <span class="n">106.6</span>, <span class="n">10.798</span>)                  <span class="c"># ValueError: tây nằm phía đông của đông</span>
+
+<span class="c"># vùng bao hai đầu chuyến đi, có đệm — chính là bước 1 của RoutingService</span>
+area = BBox.covering([(<span class="n">106.6985</span>, <span class="n">10.7770</span>), (<span class="n">106.7180</span>, <span class="n">10.7730</span>)], pad_degrees=<span class="n">0.02</span>)
+
+<span class="c"># một điểm — cũng kiểm tra ngay</span>
+p = GeoPoint(<span class="n">106.7009</span>, <span class="n">10.7769</span>)              <span class="c"># kinh độ trước</span>
+GeoPoint(<span class="n">10.7769</span>, <span class="n">106.7009</span>)                    <span class="c"># ValueError: vĩ độ ngoài khoảng</span>
+
+<span class="c"># khoảng cách</span>
+haversine_m((<span class="n">106.6985</span>, <span class="n">10.7770</span>), (<span class="n">106.7180</span>, <span class="n">10.7730</span>))   <span class="c"># -> 2150.4 (mét)</span></code></pre>
+
+<h3>Ai dùng <code>SpatialIndex</code>, và để làm gì</h3>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Khối</th><th>Đánh chỉ mục cái gì</th><th>Để trả lời</th></tr></thead>
+<tbody>
+<tr><td><code>mapdata</code></td><td>các ngã tư của đồ thị</td><td>“toạ độ này là nút nào?” — bước snap</td></tr>
+<tr><td><code>traffic</code></td><td>hình học các con đường</td><td>“số đo tại điểm này thuộc đường nào?” (bán kính 120 m)</td></tr>
+<tr><td><code>roadstate</code></td><td>hình học các con đường</td><td>“báo cáo ngập này nằm trên những đường nào?”</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Ba khối, ba mục đích khác nhau, và <em>không khối nào phải tự viết lại cái lưới</em>.</p>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

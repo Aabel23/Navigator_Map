@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mapdata — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html" class="active"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>mapdata</h1>
+    <p class="lead">Sở hữu mạng lưới đường của server và đồ thị tìm kiếm dựng từ nó. Đây là khối duy nhất tải dữ liệu bản đồ từ bên ngoài, và là nơi toạ độ biến thành mã nút.</p>
+    <div class="badges"><span class="badge badge-brand">Gọi Overpass API</span><span class="badge badge-good">Miễn phí, không cần khoá</span><span class="badge badge-good">28 bài kiểm thử</span><span class="badge badge-warn">Phải ghi công OpenStreetMap</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Sở hữu mạng lưới đường mà server tính toán trên đó, và đồ thị tìm kiếm
+được dựng từ mạng lưới ấy</strong> — bao gồm cả việc tra “ngã tư gần nhất” để biến
+một toạ độ thành mã số nút.</p>
+
+<div class="note warn">
+  <strong>“Dữ liệu bản đồ” và “tấm bản đồ tài xế nhìn thấy” là hai thứ khác nhau
+  cùng mang chữ “bản đồ”.</strong>
+  <p>Khối này sở hữu <em>hình học đường, loại đường, tốc độ giới hạn, tính liên
+  thông, và đồ thị</em>. Còn <em>ô bản đồ (tile), màu sắc, biểu tượng</em> và mọi
+  thứ tài xế nhìn thấy là của <a href="client-map.html">client/map</a>. Server
+  không bao giờ gửi một tile nào.</p>
+</div>
+
+<h2>2. Việc quan trọng nhất khối này làm: “way không phải là edge”</h2>
+
+<div class="plain">
+  <span class="plain-tag">Vấn đề, bằng ngôn ngữ đời thường</span>
+  <p>OpenStreetMap công bố các <strong>way</strong> — mỗi way là <em>một đường
+  kẻ liền</em>. Một way có thể dài hai cây số và chạy xuyên qua chín ngã tư.</p>
+  <p>Nhưng bộ tìm đường cần các <strong>edge</strong> (đoạn) — một khúc đường
+  giữa <em>hai ngã tư liền nhau</em>, ở giữa không có chỗ nào để rẽ.</p>
+  <p>Nếu đưa thẳng way cho bộ tìm đường, mọi ngã tư nằm giữa way đó trở nên
+  <em>vô hình</em>. Tuyến đường sẽ phóng thẳng qua đúng cái ngã tư lẽ ra phải rẽ.
+  Và đây không phải lỗi làm sập chương trình — nó vẫn trả về một tuyến đường
+  trông rất bình thường. Không một bài kiểm thử kiểu “có trả về tuyến không” nào
+  bắt được. Vì thế mới có riêng <code>mapdata/tests/test_graph.py</code>.</p>
+</div>
+
+<pre class="diagram">   Dữ liệu OSM (một way)            Đồ thị cần dùng (bốn edge)
+
+   A━━━━━━━━━━━━━━━━━━━━━━B         A━━━━1━━━━●━━━2━━━●━━━3━━━●━━━4━━━B
+        │      │      │                       │           │       │
+     ngã tư  ngã tư ngã tư                 ngã tư      ngã tư   ngã tư
+   (bị bỏ qua hoàn toàn)              (mỗi ngã tư là một nút thật)</pre>
+
+<h3>Thuật toán cắt, ba bước — <code>graph/build.py</code></h3>
+
+<ol class="steps">
+  <li>
+    <h4>Tìm ngã tư</h4>
+    <p>Một toạ độ được coi là ngã tư nếu <em>hai way cùng chứa nó</em>, cộng thêm
+    hai đầu mút của mọi way. Toạ độ được làm tròn tới <strong>6 chữ số thập
+    phân</strong> (<code>NODE_PRECISION = 6</code>, khoảng 0,11 m ở xích đạo) —
+    mịn hơn độ chính xác của chính OSM, nên hai way <em>thật sự</em> dùng chung
+    một nút thì khớp nhau, còn hai way chỉ đi ngang qua nhau thì không.</p>
+  </li>
+  <li>
+    <h4>Cắt mỗi way tại các ngã tư đó</h4>
+    <p>Mỗi mảnh giữ lại <em>phần hình học của riêng nó</em>. Chính nhờ vậy mà một
+    tuyến đường có thể vẽ được mà người vẽ không cần chạm vào đồ thị.</p>
+  </li>
+  <li>
+    <h4>Đặt tên ổn định cho mọi thứ</h4>
+    <p>Mã nút sinh từ toạ độ đã làm tròn; mã đoạn là <code>way#số thứ tự</code>.
+    Ổn định là điều kiện bắt buộc: một lệnh cấm đường ghi nhận hôm qua vẫn phải
+    trỏ đúng vào một đoạn đường có thật hôm nay.</p>
+    <p>Mảnh ngắn hơn <code>MIN_EDGE_M = 0.5</code> mét bị gộp vào hàng xóm —
+    <code>routing.Edge</code> từ chối cạnh tự nối vào chính nó, và một đoạn dài
+    vài centimet là nhiễu toạ độ chứ không phải một khúc đường.</p>
+  </li>
+</ol>
+
+<h2>3. Đầu vào — Đầu ra</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Nhận vào</th><th>Kiểu</th><th>Từ đâu</th></tr></thead>
+<tbody>
+<tr><td>khu vực</td><td><code>domain.BBox</code></td><td>người hỏi</td></tr>
+<tr><td>dữ liệu nguồn</td><td>JSON từ Overpass, qua HTTP</td><td>OpenStreetMap (miễn phí, không khoá)</td></tr>
+<tr><td>đường đã lưu</td><td><code>storage.DocumentStore</code></td><td>bộ sưu tập <code>roads</code></td></tr>
+<tr><td>bộ nhớ đệm</td><td><code>storage.Cache</code></td><td>để không hỏi dịch vụ tình nguyện hai lần cùng một câu</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Trả ra</th><th>Nghĩa</th></tr></thead>
+<tbody>
+<tr><td><code>RoadSegment</code></td><td>Một con đường đã công bố: hình học, loại đường, tốc độ thoáng tham chiếu, tên, cờ một chiều. <strong>Không có gì về chi phí, kẹt xe hay tình trạng.</strong></td></tr>
+<tr><td><code>RoadGraphProvider.graph_for(area)</code></td><td>Một <code>GraphView</code></td></tr>
+<tr><td><code>GraphView.graph</code></td><td>Đồ thị để routing tìm kiếm</td></tr>
+<tr><td><code>GraphView.nearest_node(điểm)</code></td><td>Toạ độ → mã nút</td></tr>
+<tr><td><code>GraphView.road_edges()</code></td><td><code>{mã đường: (mã đoạn, ...)}</code> — cây cầu cho traffic và roadstate</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>4. Nối với ai?</h2>
+
+<pre class="diagram">        Overpass API (OpenStreetMap)
+                 │  HTTP
+                 ▼
+         ┌───────────────┐
+         │    mapdata    │
+         └───────┬───────┘
+                 │
+    ┌────────────┼─────────────┬──────────────┬─────────────┐
+    ▼            ▼             ▼              ▼             ▼
+ storage      routing       traffic       roadstate       api
+ lưu đường  đồ thị + snap  mã đường ->   mã đường ->   /mapdata/roads
+            (MapGraph-      mã đoạn       mã đoạn      /mapdata/graph
+             Provider)    (RoadEdgeIndex)</pre>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Đầu nối</th><th>Nội dung</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td><code>mapdata → routing</code></td><td><code>MapGraphProvider.graph_for(area)</code></td>
+<td>routing <strong>không</strong> import mapdata; chính mapdata import kiểu dữ liệu của routing</td></tr>
+<tr><td><code>mapdata → traffic</code><br><code>mapdata → roadstate</code></td>
+<td><code>road_edges(area)</code></td>
+<td>Phải <strong>hỏi</strong>, không bao giờ được tự suy ra quy tắc <code>way#số</code></td></tr>
+<tr><td><code>mapdata → ingest</code></td><td><code>RoadNetwork</code> (Protocol)</td>
+<td>Nhà cung cấp kẹt xe mô phỏng cần hình học để gắn số liệu lên; hai khối không import nhau</td></tr>
+<tr><td><code>mapdata → storage</code></td><td>tài liệu + bộ nhớ đệm</td><td>bộ sưu tập <code>roads</code></td></tr>
+<tr><td><code>mapdata → api</code></td><td><code>GET /api/v1/mapdata/roads</code>, <code>/mapdata/graph</code></td><td></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>5. Có gọi API bên ngoài không?</h2>
+
+<div class="note good">
+  <strong>Có — đây là khối duy nhất đọc dữ liệu bản đồ từ bên ngoài.</strong>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Mục</th><th>Giá trị</th></tr></thead>
+<tbody>
+<tr><td>Dịch vụ</td><td><a href="https://overpass-api.de/">Overpass API</a> — cổng truy vấn dữ liệu OpenStreetMap</td></tr>
+<tr><td>Địa chỉ</td><td><code>https://overpass-api.de/api/interpreter</code></td></tr>
+<tr><td>Phương thức</td><td><code>POST</code>, thân là câu truy vấn dạng văn bản</td></tr>
+<tr><td>Khoá API</td><td><strong>Không cần</strong>. Miễn phí, không đăng ký, không hạn mức chính thức</td></tr>
+<tr><td>Nén</td><td>Bắt buộc gửi <code>Accept-Encoding: gzip</code></td></tr>
+<tr><td>Giấy phép</td><td>ODbL — <em>phải</em> ghi công “© những người đóng góp OpenStreetMap”</td></tr>
+<tr><td>Đệm</td><td>Có, xuống đĩa, qua <code>storage.Cache</code>. Khu vực được nới rộng và làm tròn để một cú kéo bản đồ nhỏ không tạo ra câu hỏi mới</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Câu truy vấn thật được gửi đi</h3>
+<pre><code>[out:json][timeout:30];
+way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|
+                 secondary|secondary_link|tertiary|tertiary_link|
+                 residential|unclassified)$"](10.757,106.674,10.798,106.725);
+out geom;</code></pre>
+
+<div class="note warn">
+  <strong>Overpass nhận hình chữ nhật theo thứ tự nam,tây,bắc,đông</strong> —
+  ngược với thứ tự GeoJSON dùng ở mọi nơi khác trong dự án. Chỗ đảo thứ tự nằm
+  gọn trong <code>roads/overpass.py</code>.
+</div>
+
+<h3>Đường lấy về không có tốc độ thì sao?</h3>
+
+<p>Tốc độ thoáng lấy từ thẻ <code>maxspeed</code> của OSM khi có. Khi không có thì
+dùng bảng mặc định theo loại đường, và bảng này được chỉnh cho giao thông đô thị
+châu Á dày đặc chứ không phải cao tốc châu Âu:</p>
+
+<pre><code>motorway 80   trunk 70   primary 50   secondary 45
+tertiary 40   residential 30   unclassified 30    (km/h)</code></pre>
+
+<div class="note">
+  <p>Thẻ <code>maxspeed</code> ghi <code>walk</code>, <code>none</code>,
+  <code>signals</code> hoặc mã mặc định quốc gia thì <em>bị bỏ qua</em>, rơi về
+  giá trị mặc định theo loại đường. Đoán một con số từ những giá trị đó chính là
+  cách một mốc tham chiếu lặng lẽ biến thành chuyện bịa.</p>
+</div>
+
+<h2>6. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Mặt tiền công khai duy nhất. <code>mapdata.roads.overpass</code>, <code>mapdata.graph.build</code>, <code>mapdata.http</code> là nội bộ.</span></div>
+<div class="row"><span class="f">models.py</span><span class="d"><code>RoadSegment</code> — con đường đã công bố — và <code>coords_of</code>.</span></div>
+<div class="row"><span class="f">network.py</span><span class="d"><code>RoadNetwork</code>: một <code>Protocol</code> chỉ có một câu hỏi — “có những đường nào trong ô này?”. Ai trả lời được thì là một mạng lưới đường, dù đọc từ Overpass, từ file trích xuất, hay từ dữ liệu mẫu.</span></div>
+<div class="row"><span class="f">errors.py</span><span class="d"><code>MapDataError</code>, <code>SourceUnavailable</code> (tạm thời, thử lại được), <code>BadResponse</code> (lược đồ đầu nguồn đã đổi, thử lại vô ích).</span></div>
+<div class="row"><span class="f">http.py</span><span class="d">Nơi duy nhất khối này chạm vào mạng. Chỉ dùng thư viện chuẩn.</span></div>
+<div class="row"><span class="f dir">roads/overpass.py</span><span class="d">Dựng câu truy vấn, gọi, phân tích, đọc <code>maxspeed</code>, áp bảng tốc độ mặc định.</span></div>
+<div class="row"><span class="f dir">graph/build.py</span><span class="d"><strong>Trái tim của khối.</strong> way → ngã tư → edge; đặt mã; và chỗ <em>duy nhất</em> trong toàn server đổi từ kinh-độ-trước sang vĩ-độ-trước.</span></div>
+<div class="row"><span class="f dir">graph/provider.py</span><span class="d"><code>RoadGraphProvider</code> (nhớ đệm đồ thị theo khu vực), <code>NetworkGraphView</code>, và việc snap toạ độ về nút.</span></div>
+<div class="row"><span class="f">store.py</span><span class="d">Ba lớp: <code>RoadStore</code> (đổi qua lại với storage), <code>StoredRoadNetwork</code> (chỉ đọc từ kho), <code>PersistingRoadNetwork</code> (lấy từ nguồn, lưu lại, và khi nguồn chết thì rơi về kho).</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">28 bài: cắt way, snap, lưu trữ, và đường lui khi mất mạng.</span></div>
+</div>
+
+<h2>7. Các file phối hợp với nhau ra sao</h2>
+
+<pre class="diagram">BBox (một ô chữ nhật trên bản đồ)
+ │
+ ▼  store.py  PersistingRoadNetwork.roads(khu vực)
+ │     ├─ thử roads/overpass.py ─▶ http.py ─▶ Overpass ─▶ phân tích ─▶ RoadSegment[]
+ │     │      (storage.Cache cắt ngắn nếu đã hỏi câu này rồi)
+ │     ├─ lưu lại qua store.RoadStore ─▶ storage.DocumentStore
+ │     └─ nếu hỏng: dùng store.StoredRoadNetwork — thứ đã lưu lần trước
+ ▼
+RoadSegment[]                     kinh/vĩ, mỗi phần tử là một way của OSM
+ │
+ ▼  graph/build.py  build_graph()
+ │     1. tìm ngã tư: toạ độ mà hai way cùng có, cộng hai đầu mọi way
+ │     2. cắt mỗi way tại đó; mỗi mảnh giữ phần hình học của nó
+ │     3. đặt mã: nút từ toạ độ làm tròn, đoạn từ way#số
+ │     4. đảo sang vĩ-độ-trước — nơi DUY NHẤT trong server làm việc này
+ ▼
+GraphBuild  (routing.RoadGraph  +  bảng mã đường → mã đoạn)
+ │
+ ▼  graph/provider.py
+ │     RoadGraphProvider nhớ đệm kết quả theo từng khu vực
+ │     NetworkGraphView bọc lại: .graph, .nearest_node(), .road_edges()
+ │        nearest_node dùng domain.SpatialIndex trên tập ngã tư
+ ▼
+routing dùng đồ thị + hàm snap   ·   traffic & roadstate dùng bảng mã</pre>
+
+<h2>8. Thuật toán và kỹ thuật</h2>
+
+<h3>8.1 Snap: biến toạ độ thành mã nút</h3>
+
+<p>Điểm bạn bấm trên màn hình rơi giữa lòng đường. Khối này tìm <em>ngã tư gần
+nhất</em> bằng <code>domain.SpatialIndex</code> — một lưới ô vuông đơn giản:</p>
+
+<ul>
+  <li>Mỗi ngã tư được ném vào một ô lưới cỡ <strong>0,01°</strong> (khoảng 1,1 km).</li>
+  <li>Tra cứu bắt đầu từ ô chứa điểm cần tìm rồi <em>loang dần ra từng vòng</em>.</li>
+  <li>Dừng khi vòng tiếp theo không thể gần hơn ứng viên tốt nhất đang có.</li>
+</ul>
+
+<p>Vì sao dùng lưới chứ không dùng cây k-d? Vì các ngã tư phân bố khá đều trên
+mặt phẳng, đó đúng là tình huống lưới xử lý tốt và cây chỉ làm phức tạp thêm.</p>
+
+<div class="note">
+  <strong>Vì sao snap nằm ở đây chứ không ở routing?</strong>
+  <p>Vì <em>các nút nằm ở đây</em>. Hợp đồng của routing nói thẳng rằng biến toạ
+  độ thành mã nút không phải việc của nó. Làm ở hai nơi sẽ cho hệ thống hai cách
+  bất đồng về chuyện tài xế đang ở đâu.</p>
+</div>
+
+<h3>8.2 Thứ tự toạ độ — cái bẫy kinh điển</h3>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Nơi</th><th>Thứ tự</th><th>Vì sao</th></tr></thead>
+<tbody>
+<tr><td>mapdata, api, GeoJSON, Overpass, client</td><td><strong>kinh độ trước</strong></td><td>chuẩn GeoJSON, và mọi nguồn miễn phí đều công bố như vậy</td></tr>
+<tr><td>bên trong routing</td><td><strong>vĩ độ trước</strong></td><td>hợp đồng của khối đó ghi như vậy</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Chỗ đổi <strong>duy nhất</strong> nằm ở <code>graph/build.py</code>. Không
+module nào khác — kể cả tầng API — được phép thêm chỗ đổi thứ hai.</p>
+
+<h3>8.3 Nhớ đệm hai tầng, và đường lui khi mất mạng</h3>
+
+<pre class="diagram">hỏi một khu vực
+   ├── đồ thị đã dựng cho khu vực này?  ──▶ trả ngay          (~0,00 giây)
+   ├── phản hồi Overpass đã có trên đĩa? ──▶ dựng đồ thị      (vài giây)
+   ├── gọi Overpass                      ──▶ lưu + dựng      (hàng chục giây)
+   └── Overpass chết?
+          ├── khu vực từng tải rồi ──▶ dùng bản đã lưu trong kho
+          └── chưa từng tải       ──▶ trả lời "không có đường"</pre>
+
+<div class="note warn">
+  <strong>Đường lui theo <em>khu vực</em>, không theo <em>tuổi dữ liệu</em>.</strong>
+  <p>Nếu Overpass chết và khu vực này chưa bao giờ được tải, câu trả lời là
+  “không có đường” chứ không phải một đồ thị cũ mèm của khu vực bên cạnh. Trả về
+  đường của chỗ khác thì tệ hơn là trả về không có gì.</p>
+</div>
+
+<h2>9. Ví dụ thật</h2>
+
+<h3>Xem đồ thị của một khu vực</h3>
+<pre><code>GET /api/v1/mapdata/graph?bbox=106.675,10.758,106.725,10.798
+
+<span class="s">{
+  "status": "ok",
+  "bbox": [106.674, 10.757, 106.725, 10.798],
+  "sources": 5140,     </span><span class="c">// số way lấy về từ OSM</span><span class="s">
+  "nodes":   6182,     </span><span class="c">// số ngã tư tìm được</span><span class="s">
+  "edges":   8062,     </span><span class="c">// số đoạn sau khi cắt</span><span class="s">
+  "skipped": 3         </span><span class="c">// mảnh quá ngắn, bị gộp</span><span class="s">
+}</span></code></pre>
+
+<p>Chú ý: <strong>5140 way → 8062 đoạn</strong>. Nếu không cắt, bộ tìm đường chỉ
+có 5140 lựa chọn và mọi ngã tư giữa way đều vô hình.</p>
+
+<h3>Lấy hình học đường</h3>
+<pre><code>GET /api/v1/mapdata/roads?bbox=106.69,10.77,106.71,10.79
+
+<span class="s">{
+  "status": "ok", "count": 1506, "truncated": false,
+  "type": "FeatureCollection",
+  "features": [{
+    "type": "Feature",
+    "id": "osm:way/32575984",
+    "geometry": { "type": "LineString", "coordinates": [[106.6999, 10.7761], ...] },
+    "properties": {
+      "id": "osm:way/32575984",
+      "road_class": "residential",
+      "free_flow_kph": 30.0,
+      "name": "Đường Mê Linh",
+      "oneway": false,
+      "length_m": 230.1
+    }
+  }, ...]
+}</span></code></pre>
+
+<div class="note">
+  <strong>Endpoint này tồn tại để làm gì, khi client đã tự tải tile rồi?</strong>
+  <p>Vì có thứ một tile không cho được: <em>cách server nhìn mạng lưới</em>. Client
+  cần nó để tô sáng đúng một đoạn đường, để đặt biển cấm lên đúng con phố, hoặc để
+  giải thích vì sao tuyến đường lại đi lối đó. Đây là <em>dữ liệu</em> bản đồ,
+  không phải một tấm bản đồ.</p>
+  <p>Giới hạn 5000 đoạn mỗi lần gọi (<code>MAX_SEGMENTS</code>); vượt thì cờ
+  <code>truncated</code> bật lên.</p>
+</div>
+
+<h3>Chi phí thực tế, đo được</h3>
+<pre><code>                    lần đầu (nguội)   lần sau (đã đệm)
+đường (roads)            28,3 giây         0,20 giây
+dựng đồ thị              26,3 giây         0,00 giây
+tóm tắt đồ thị                  —          0,00 giây</code></pre>
+
+<h2>10. Những gì không được chạm vào</h2>
+
+<ul>
+  <li><code>mapdata.roads.overpass</code>, <code>mapdata.graph.build</code>,
+  <code>mapdata.http</code> — hãy <code>from mapdata import ...</code></li>
+  <li>Nội dung câu truy vấn Overpass, khoá nhớ đệm, bảng tốc độ mặc định</li>
+  <li>Cách một way bị cắt — <em>miễn là</em> mã đoạn vẫn ổn định và
+  <code>road_edges()</code> vẫn báo đúng bảng ánh xạ</li>
+  <li><strong>Không khối nào khác được giữ một mạng lưới đường thứ hai.</strong></li>
+</ul>
+
+<h2>11. Bảo đảm mà người dùng có thể tin</h2>
+
+<ul>
+  <li><strong>Mã đoạn ổn định</strong> — <code>way#số</code>. Lệnh cấm ghi hôm qua
+  vẫn trỏ đúng hôm nay.</li>
+  <li><strong>Mã nút sinh từ toạ độ làm tròn</strong>, nên cùng một ngã tư luôn
+  có cùng mã ở mọi lần dựng.</li>
+  <li>Mỗi đoạn giữ <em>phần hình học của riêng nó</em>, nên vẽ được mà không cần
+  đồ thị.</li>
+  <li><code>RoadSegment</code> mang hình học, loại, tốc độ thoáng, tên, một chiều
+  — và <strong>không có gì</strong> về chi phí, kẹt xe hay tình trạng.</li>
+</ul>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

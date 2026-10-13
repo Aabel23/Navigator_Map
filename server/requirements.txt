@@ -1,0 +1,14 @@
+# The whole server, in two lines.
+#
+# Flask is the only runtime dependency, and it is confined to api/ -- every
+# other block is standard library only, which is what lets routing be
+# benchmarked, mapdata be driven from a build script, and any of them be
+# imported by a test with no web framework installed. The dependency-direction
+# test enforces that rather than trusting it.
+#
+# pytest is needed only to run the suite.
+#
+# Both are free and open source, which is a project rule rather than an
+# accident: nothing here may depend on a paid or freemium service.
+flask>=3.0
+pytest>=7.4

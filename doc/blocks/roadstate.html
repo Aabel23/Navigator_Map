@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>roadstate — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html" class="active"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>roadstate</h1>
+    <p class="lead">Đường cấm, ngập, đang thi công, tai nạn — và thời hạn hiệu lực của chúng. Tới bộ tìm đường bằng hai lối riêng biệt: ràng buộc và chi phí.</p>
+    <div class="badges"><span class="badge badge-good">Không gọi API ngoài</span><span class="badge badge-good">34 bài kiểm thử</span><span class="badge badge-bad">Cấm đường ≠ chi phí</span><span class="badge badge-warn">Ngập ≥ 30 cm thì chặn</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Sở hữu những gì <em>tạm thời</em> đúng về một con đường</strong>: đường
+cấm, ngập nước, đang thi công, tai nạn, hạn chế. Nó phân loại một báo cáo thành
+một trong các dạng đó, gắn vào đúng con đường, giữ lại chừng nào còn hiệu lực,
+trả lời “khu vực này đang có chuyện gì”, và diễn đạt tất cả cho bộ tìm đường dưới
+hai hình thức: <strong>đoạn bị cấm</strong> và <strong>hệ số chi phí</strong>.</p>
+
+<h2>2. Vì sao nó không nằm chung với traffic?</h2>
+
+<div class="plain">
+  <span class="plain-tag">Sự khác biệt cốt lõi</span>
+  <p><strong>Kẹt xe là một số đo bị phai.</strong> Một tốc độ, đúng trong vài
+  phút, rồi bị thay bởi lần đọc tiếp theo. Không ai “huỷ” một vụ kẹt xe — nó chỉ
+  cũ đi.</p>
+  <p><strong>Tình trạng đường là một lời tuyên bố có thời hạn.</strong> “Phố này
+  đóng đến thứ Sáu” — và điều đó đúng lúc 3 giờ sáng y hệt như lúc cao điểm. Nó
+  <em>kết thúc</em> chứ không phai dần.</p>
+  <p>Hai thứ đó đi tới bộ tìm đường bằng hai con đường khác nhau, vì cùng một lý
+  do: kẹt xe thì chậm hơn, cấm đường thì không đi được. Một bộ định tuyến không
+  phân biệt được hai thứ sẽ hoặc bắt tài xế vòng hai mươi cây số để tránh một hàng
+  xe, hoặc lái thẳng vào một rào chắn.</p>
+</div>
+
+<h2>3. Hai con đường tới routing, và vì sao phải là hai</h2>
+
+<pre class="diagram">   báo cáo đã phân loại
+          │
+          ├── có chặn đường?  ──▶ blocked_edges(khu vực)
+          │                        frozenset[mã đoạn]
+          │                              ▼
+          │                     routing.RouteConstraints
+          │                     (đoạn này bị GẠCH khỏi lựa chọn)
+          │
+          └── còn lại        ──▶ multipliers_for(khu vực)
+                                   {mã đoạn: hệ số ≥ 1.0}
+                                         ▼
+                                 routing.DynamicCostModel
+                                 (đoạn này chỉ ĐẮT hơn)</pre>
+
+<div class="note bad">
+  <strong>Đường cấm là RÀNG BUỘC, không bao giờ là CHI PHÍ.</strong>
+  <p>Diễn đạt một lệnh cấm bằng “một con số rất lớn” là lỗi kinh điển của phần mềm
+  dẫn đường: khi <em>không còn con đường nào khác</em> nối hai đầu chuyến đi, thuật
+  toán sẽ vui vẻ “dùng” con đường đắt đó và trả về một tuyến chạy thẳng qua phố
+  đang ngập — triệu chứng duy nhất là thời gian dự kiến hơi dài bất thường.</p>
+  <p>Một ràng buộc thì không thể mặc cả. Nên câu trả lời trung thực — “không có
+  đường” — mới là thứ quay về.</p>
+</div>
+
+<div class="note">
+  <strong>Còn lại thì là chi phí.</strong>
+  <p>Công trình, một vụ va chạm, nước ngập nông: <em>tệ hơn</em>, chứ không phải
+  <em>mất hẳn</em>. Tài xế thà bò qua công trường còn hơn bị đưa đi vòng năm cây số.</p>
+</div>
+
+<h3>Một hệ quả tinh tế về cách xử lý lỗi</h3>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Hàm</th><th>Khi đọc bảng mã đường→mã đoạn bị lỗi</th><th>Vì sao</th></tr></thead>
+<tbody>
+<tr><td><code>blocked_edges</code></td><td><strong>Ném lỗi.</strong> Yêu cầu tìm đường thất bại an toàn.</td>
+<td>Âm thầm bỏ sót một lệnh cấm là chế độ hỏng duy nhất khối này tuyệt đối không được có.</td></tr>
+<tr><td><code>multipliers_for</code></td><td><strong>Trả về rỗng.</strong> Tuyến đường vẫn được tính.</td>
+<td>Một tuyến định giá mà không biết có công trường thì chỉ là một tuyến tệ hơn.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>4. Thứ tự phân loại — và nó không phải theo bảng chữ cái</h2>
+
+<pre><code>CLASSIFIERS = (as_closure, as_flooding, as_construction, as_incident)
+              ──────────  ───────────  ───────────────  ────────────
+              đóng đường    ngập        thi công        sự cố (bắt hết)</code></pre>
+
+<p>Cái đầu tiên khớp sẽ thắng. Thứ tự này <em>là</em> chính sách.</p>
+
+<div class="plain">
+  <p>Các báo cáo chồng lấn nhau. “Phố ngập, cấm xe qua” khớp cả hai luật, và cái
+  nào thắng sẽ quyết định tài xế bị <em>đưa vòng</em> hay chỉ bị <em>đi chậm lại</em>.</p>
+  <p><strong>Đóng đường đứng đầu</strong> vì đó là tuyên bố mạnh nhất trong hệ
+  thống và là tuyên bố mà đoán sai theo hướng dễ dãi thì trả giá đắt nhất.
+  <strong>Sự cố đứng cuối</strong>, đóng vai lưới hứng — nó không bao giờ từ chối
+  một báo cáo nào.</p>
+</div>
+
+<h2>5. Ngập nước — ngưỡng 30 cm</h2>
+
+<div class="note warn">
+  <strong>Nước đọng từ 30 cm trở lên thì <em>chặn đường</em>, dưới đó thì chỉ làm chậm.</strong>
+  <p>Ngưỡng này cố ý đặt <em>thấp hơn</em> mức xe thật sự chết máy. Lý do rất
+  đơn giản: cái giá của một lần đi vòng không cần thiết là vài phút, còn cái giá
+  của sai lầm ngược lại là chiếc xe.</p>
+</div>
+
+<ul>
+  <li><code>BLOCKING_DEPTH_CM = 30.0</code> — từ đây trở lên là chặn</li>
+  <li><code>SEVERE_DEPTH_CM = 20.0</code> — từ đây được coi là nghiêm trọng dù vẫn qua được</li>
+  <li>Khi <em>không có</em> số liệu độ sâu (trường hợp phổ biến), mức nghiêm trọng
+  lấy theo những gì nguồn tin khai báo, và chỉ báo cáo nói rõ là không qua được
+  mới chặn đường.</li>
+  <li>Nhận diện qua từ khoá cả tiếng Anh lẫn tiếng Việt:
+  <code>flood</code>, <code>flooded</code>, <code>water</code>,
+  <strong><code>ngập</code></strong>, <code>submerged</code>, <code>inundat</code>…</li>
+</ul>
+
+<p>Đây là loại tình trạng mà thành phố quê hương của dự án tạo ra nhiều nhất, và
+cũng là nơi ngưỡng chặn quan trọng nhất.</p>
+
+<h2>6. Hết hạn — khi không ai huỷ báo cáo</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tình huống</th><th>Xử lý</th></tr></thead>
+<tbody>
+<tr><td>Báo cáo <em>có</em> ghi giờ kết thúc</td><td>Tôn trọng đúng như ghi</td></tr>
+<tr><td>Báo cáo <em>không</em> ghi giờ kết thúc</td><td>Thôi tin sau <strong>6 giờ</strong> (<code>DEFAULT_OPEN_ENDED_TTL</code>)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Nhiều nguồn dữ liệu miễn phí công bố một sự cố rồi rút nó xuống khi đã giải
+quyết xong. Một vụ va chạm mà không ai rút xuống thì <em>không được phép</em> làm
+lệch dòng giao thông suốt một tuần.</p>
+
+<h2>7. Nối với ai?</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Đầu nối</th><th>Nội dung</th></tr></thead>
+<tbody>
+<tr><td><code>ingest → roadstate</code></td><td>Một báo cáo đã chuẩn hoá — chỉ có <em>hình dạng</em>, không có phán xét. <code>classify</code> mới quyết định nó thật sự là gì.</td></tr>
+<tr><td><code>mapdata → roadstate</code></td><td><code>road_edges(area)</code> — cùng cây cầu mà traffic dùng, vì cùng một lý do</td></tr>
+<tr><td><code>roadstate → routing</code></td><td>Hai hàm: <code>blocked_edges(area)</code> và <code>multipliers_for(area)</code></td></tr>
+<tr><td><code>roadstate → storage</code></td><td>Bộ sưu tập <code>road_conditions</code>, kèm khoảng thời gian hiệu lực</td></tr>
+<tr><td><code>roadstate → api</code></td><td><code>GET /roadstate?bbox=</code>, <code>GET</code>/<code>DELETE /roadstate/{id}</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note good">
+  <strong>Không gọi API bên ngoài.</strong> Báo cáo đến từ <code>ingest</code>,
+  dù nguồn là người vận hành gõ tay hay một bản tin sự cố từ feed quốc gia — và
+  cả hai <em>đi qua đúng một bộ phân loại</em>.
+</div>
+
+<h2>8. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Mặt tiền công khai.</span></div>
+<div class="row"><span class="f">models.py</span><span class="d"><code>RoadCondition</code>, <code>RoadStateSnapshot</code>, <code>ConditionKind</code>, <code>Severity</code>, và <code>DEFAULT_MULTIPLIERS</code> — bảng hệ số theo loại × mức nghiêm trọng.</span></div>
+<div class="row"><span class="f">classify.py</span><span class="d"><code>classify()</code>, <code>classify_all()</code>, và <code>CLASSIFIERS</code> — bảng có thứ tự. <strong>Chỗ duy nhất</strong> quyết định một báo cáo là gì.</span></div>
+<div class="row"><span class="f dir">kinds/closures.py</span><span class="d">“Đây có phải đóng đường không?” — được hỏi đầu tiên.</span></div>
+<div class="row"><span class="f dir">kinds/flooding.py</span><span class="d">“Đây có phải ngập không?” — mang ngưỡng 30 cm và danh sách từ khoá song ngữ.</span></div>
+<div class="row"><span class="f dir">kinds/construction.py</span><span class="d">“Đây có phải công trình không?”</span></div>
+<div class="row"><span class="f dir">kinds/incidents.py</span><span class="d">Lưới hứng — không bao giờ trả về “không phải”.</span></div>
+<div class="row"><span class="f">attribute.py</span><span class="d">Hình học → danh sách mã đường, dọc theo <em>toàn bộ</em> chiều dài, dùng <code>domain.SpatialIndex</code>.</span></div>
+<div class="row"><span class="f">store.py</span><span class="d"><code>RoadStateStore</code>: ghi nhận, truy vấn theo khu vực và thời điểm, rút lại, và hết hạn.</span></div>
+<div class="row"><span class="f">provider.py</span><span class="d"><code>RoadStateSource</code>: hai con đường tới routing.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">34 bài: phân loại, khoảng hiệu lực, và ranh giới ràng-buộc/chi-phí.</span></div>
+</div>
+
+<h3>Vì sao <code>kinds/</code> lại là một file cho mỗi loại?</h3>
+
+<p>Vì mỗi loại có luật riêng, thang nghiêm trọng riêng, và phép thử “có chặn
+đường không” riêng — ngập có ngưỡng độ sâu, công trình thì không, đóng đường thì
+chặn theo định nghĩa. Tách ra nghĩa là thêm một loại chỉ là thêm một file cộng
+một dòng trong <code>CLASSIFIERS</code>, và sửa ngưỡng ngập không thể vô tình làm
+đổi định nghĩa của “công trình”.</p>
+
+<h2>9. Luồng qua từng file</h2>
+
+<pre class="diagram">báo cáo (người vận hành, client, hoặc một bản tin trong feed)
+    │
+    ▼  ingest.incidents.normalize_report      chỉ kiểm tra hình dạng, không phán xét
+    │
+    ▼  classify.py
+    │     kinds/closures.py ─▶ flooding.py ─▶ construction.py ─▶ incidents.py
+    │     cái đầu tiên khớp thì thắng; THỨ TỰ CHÍNH LÀ CHÍNH SÁCH
+    ▼
+  RoadCondition (loại, mức nghiêm trọng, có chặn không, hiệu lực từ-đến)
+    │
+    ▼  attribute.py
+    │     hình học -> mã các con đường, dọc toàn bộ chiều dài,
+    │     qua domain.SpatialIndex trên tập đường mapdata đã công bố
+    ▼
+  RoadCondition đã có road_ids
+    │
+    ▼  store.py  RoadStateStore.record()
+    │     lưu qua storage.DocumentStore kèm khoảng hiệu lực
+    │     báo cáo không có hạn kết thúc sẽ hết tin sau 6 giờ
+    ▼
+  đang có hiệu lực trong khu vực này, ngay lúc này
+    │
+    ▼  provider.py  RoadStateSource
+    │     mapdata.road_edges(khu vực): mã đường -> mã đoạn, rồi:
+    ├──▶ blocked_edges(khu vực)    frozenset[mã đoạn]     -> RouteConstraints
+    └──▶ multipliers_for(khu vực)  {mã đoạn: số ≥ 1.0}    -> DynamicCostModel</pre>
+
+<h2>10. Ví dụ thật — đóng một con đường và xem tuyến đổi</h2>
+
+<h3>Bước 1 — gửi báo cáo</h3>
+<pre><code>POST /api/v1/ingest/reports
+<span class="s">{
+  "reports": [{
+    "id": "demo-closure-1789293621",
+    "kind": "closure",
+    "severity": "critical",
+    "blocking": true,
+    "description": "Road closed (reported from the demo)",
+    "geometry": [[106.70119, 10.78295]]
+  }]
+}</span>
+
+<span class="c">// trả về</span>
+<span class="s">{ "status": "ok", "accepted": 1, "rejected": 0, "reasons": [] }</span></code></pre>
+
+<h3>Bước 2 — kiểm tra nó đã có hiệu lực</h3>
+<pre><code>GET /api/v1/roadstate?bbox=106.69,10.77,106.71,10.79
+
+<span class="s">{
+  "status": "ok",
+  "total": 1,
+  "by_kind": { "closure": 1, "construction": 0, "flooding": 0,
+               "hazard": 0, "incident": 0, "restriction": 0 },
+  "blocking": [{
+    "id": "report:demo-closure-1789293621",   </span><span class="c">// server tự thêm tiền tố nguồn</span><span class="s">
+    "kind": "closure",
+    "severity": "critical",
+    "blocking": true,
+    "road_ids": ["osm:way/..."],              </span><span class="c">// attribute.py đã gắn vào đường</span><span class="s">
+    "geometry": [[106.70119, 10.78295]],
+    "source": "report",
+    "reported_at": "2026-09-13T..."
+  }],
+  "conditions": [ ... ]
+}</span></code></pre>
+
+<h3>Bước 3 — tìm đường lại</h3>
+<pre><code>trước khi cấm:  1326.7 m   289.4 giây
+sau khi cấm  :  1317.3 m   267.0 giây
+tuyến có đổi :  CÓ  (danh sách segments khác hẳn)</code></pre>
+
+<h3>Bước 4 — mở lại</h3>
+<pre><code>DELETE /api/v1/roadstate/report%3Ademo-closure-1789293621
+
+<span class="s">{ "status": "ok", "withdrawn": true }</span></code></pre>
+
+<div class="note">
+  <strong>Chú ý mã định danh.</strong>
+  <p>Bạn gửi lên <code>demo-closure-1789293621</code>, nhưng tình trạng được lưu
+  với mã <code>report:demo-closure-1789293621</code> — <code>ingest</code> gắn
+  thêm tiền tố nguồn. Muốn rút lại thì phải dùng mã <em>server trả về</em>, lấy
+  từ <code>GET /roadstate</code>, chứ không phải mã bạn đã gửi.</p>
+</div>
+
+<h2>11. Những gì không được chạm vào</h2>
+
+<ul>
+  <li><code>roadstate.kinds.*</code>, <code>roadstate.classify</code>,
+  <code>roadstate.store</code> — hãy <code>from roadstate import ...</code></li>
+  <li>Các bảng từ khoá bên trong từng module <code>kinds/</code></li>
+  <li>Giá trị cụ thể trong bảng hệ số — quyết định sản phẩm, được mong đợi sẽ đổi</li>
+  <li><strong>Không module nào khác được quyết định một báo cáo là gì.</strong>
+  <code>classify.py</code> là chỗ duy nhất, theo đúng thứ tự đã nêu.</li>
+</ul>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

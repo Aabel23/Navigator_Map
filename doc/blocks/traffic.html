@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>traffic — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html" class="active"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>traffic</h1>
+    <p class="lead">Quyết định một tốc độ có nghĩa là gì và nó khiến chuyến đi đắt thêm bao nhiêu. Không gọi mạng — ingest lấy số liệu, khối này suy nghĩ về chúng.</p>
+    <div class="badges"><span class="badge badge-good">Không gọi API ngoài</span><span class="badge badge-good">35 bài kiểm thử</span><span class="badge badge-neutral">Chỉ thư viện chuẩn</span><span class="badge badge-warn">Hệ số luôn ≥ 1.0, chặn ở 8×</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Quyết định một tốc độ <em>có nghĩa là gì</em>, và nghĩa đó khiến chuyến
+đi đắt thêm bao nhiêu.</strong> Nó gắn số đo lên đúng con đường, phân loại mức độ
+kẹt, giữ bức tranh hiện tại, và diễn đạt bức tranh đó thành các hệ số nhân chi phí
+mà bộ tìm đường tiêu thụ.</p>
+
+<div class="note good">
+  <strong>Khối này không gọi mạng. Một lần cũng không.</strong>
+  <p><a href="ingest.html">ingest</a> nói chuyện với các nguồn dữ liệu;
+  <code>traffic</code> chỉ <em>suy nghĩ</em> về những gì họ nói. Đây cũng là lý do
+  nó chỉ dùng thư viện chuẩn Python và kiểm thử được mà không cần mạng.</p>
+</div>
+
+<div class="plain">
+  <span class="plain-tag">Ví von cho người mới</span>
+  <p>Một cảm biến ven đường chỉ biết nói: “tại điểm này, xe đang chạy 12,4 km/h,
+  còn khi đường thoáng thì chỗ này chạy 50 km/h”.</p>
+  <p>Đó là <em>số đo</em>. Nhưng “12,4 trên 50” tự nó chưa nói gì cả. Phải có ai
+  đó quyết định: tỉ lệ 0,25 thì gọi là “tắc nghẽn”, tô màu đỏ sẫm, và làm chuyến
+  đi qua đó lâu gấp bốn lần. <strong>Ba quyết định đó là công việc của khối này</strong>,
+  và chúng là <em>phán xét</em> chứ không phải tra bảng — nên chúng được đặt ở một
+  chỗ duy nhất, áp dụng cho mọi nguồn dữ liệu như nhau.</p>
+</div>
+
+<h2>2. Ba phán xét khối này đưa ra</h2>
+
+<ol class="steps">
+  <li>
+    <h4>Số đo này nói về con đường nào?</h4>
+    <p>Bản ghi nào đã tự khai <code>road_id</code> thì thắng luôn. Một số đo dạng
+    <em>điểm</em> thì bám vào con đường gần nhất trong bán kính
+    <strong>120 mét</strong>; xa hơn thì câu trả lời là “không thuộc đường nào”.</p>
+    <p>Vì sao 120 m? Đủ rộng cho một cột cảm biến dựng bên lề đường đôi, và đủ hẹp
+    để một con hẻm chạy song song không hứng lấy cái kẹt xe của đại lộ. Gán nhầm
+    là bịa ra một vụ kẹt xe trên con phố đang hoàn toàn bình thường.</p>
+  </li>
+  <li>
+    <h4>Hai số đo mâu thuẫn thì tin ai?</h4>
+    <p>Xếp hạng theo thứ tự: <strong>đo thật thắng mô phỏng</strong> → rồi đến
+    độ tin cậy → rồi đến độ mới. <em>Xếp hạng, không bao giờ lấy trung bình.</em></p>
+    <p>Trung bình cộng của một cảm biến và một mô hình là một con số không còn
+    nguồn gốc trung thực nào để ghi lên nó.</p>
+  </li>
+  <li>
+    <h4>Tỉ lệ đó nghĩa là gì?</h4>
+    <p>Bảng mức độ trong <code>levels.py</code>, một chỗ duy nhất, cho mọi nguồn
+    cùng lúc. Và bảng này được <em>phục vụ qua API</em> tại
+    <code>GET /api/v1/traffic/levels</code>, nên không một bộ vẽ nào mang theo ý
+    kiến riêng về “kẹt nặng trông như thế nào”.</p>
+  </li>
+</ol>
+
+<h2>3. Bảng mức độ kẹt xe</h2>
+
+<p>Tỉ lệ = tốc độ đo được ÷ tốc độ khi đường thoáng. Hàng đầu tiên mà tỉ lệ đạt
+tới sẽ thắng.</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Mức</th><th>Tỉ lệ tối thiểu</th><th>Màu</th><th>Nghĩa</th></tr></thead>
+<tbody>
+<tr><td><code>free_flow</code></td><td>≥ 0,85</td><td><span style="display:inline-block;width:36px;height:12px;border-radius:3px;background:#2fa84f"></span> <code>#2fa84f</code></td><td>Thoáng</td></tr>
+<tr><td><code>light</code></td><td>≥ 0,65</td><td><span style="display:inline-block;width:36px;height:12px;border-radius:3px;background:#9ec93a"></span> <code>#9ec93a</code></td><td>Hơi đông</td></tr>
+<tr><td><code>moderate</code></td><td>≥ 0,45</td><td><span style="display:inline-block;width:36px;height:12px;border-radius:3px;background:#f2b826"></span> <code>#f2b826</code></td><td>Đông</td></tr>
+<tr><td><code>heavy</code></td><td>≥ 0,25</td><td><span style="display:inline-block;width:36px;height:12px;border-radius:3px;background:#e8632c"></span> <code>#e8632c</code></td><td>Kẹt nặng</td></tr>
+<tr><td><code>standstill</code></td><td>&gt; 0</td><td><span style="display:inline-block;width:36px;height:12px;border-radius:3px;background:#c0243c"></span> <code>#c0243c</code></td><td>Tắc nghẽn</td></tr>
+<tr><td><code>unknown</code></td><td>—</td><td><span style="display:inline-block;width:36px;height:12px;border-radius:3px;background:#9aa3ad"></span> <code>#9aa3ad</code></td><td>Không có số liệu</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+  <strong>“Không có số liệu” được tô xám, không tô xanh.</strong>
+  <p>Giá trị số của <code>unknown</code> là <strong>−1</strong>, cố ý âm, để nó
+  không bao giờ so sánh ra “tệ hơn đường thoáng”. Không có số đo thì không phải
+  là không kẹt xe, và cũng không phải là kẹt xe.</p>
+</div>
+
+<h2>4. Từ tỉ lệ thành hệ số chi phí</h2>
+
+<pre><code>hệ số = 1 / tỉ lệ,   nhưng kẹp trong khoảng [1.0 , 8.0]</code></pre>
+
+<p>Trực giác rất đơn giản: đường chạy bằng <em>một nửa</em> tốc độ thoáng thì mất
+<em>gấp đôi</em> thời gian. Nghịch đảo của tỉ lệ chính xác là hệ số đó.</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Chặn</th><th>Giá trị</th><th>Vì sao</th></tr></thead>
+<tbody>
+<tr><td>Chặn dưới</td><td><strong>1.0</strong></td>
+<td>Điều kiện thực tế có thể làm đường chậm đi, không bao giờ làm nó nhanh hơn tốc
+độ thoáng của chính nó. Hệ số nhỏ hơn 1.0 phá vỡ tính “không nói quá” của hàm ước
+lượng A* — và điều đó <em>không báo lỗi</em>, nó chỉ lặng lẽ trả về tuyến tệ hơn.</td></tr>
+<tr><td>Chặn trên</td><td><strong>8.0</strong></td>
+<td>Gấp tám lần là con đường lẽ ra chạy 50 km/h nay bò 6 km/h — tắc nghẽn thật sự,
+và tệ hơn mọi lựa chọn thay thế có thật, mà vẫn không phải vô cực.
+<strong>Kẹt xe không phải là cấm đường</strong>; cấm đường có lối đi riêng qua
+<a href="roadstate.html">roadstate</a>.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>5. Mã đường và mã đoạn — cây cầu</h2>
+
+<pre class="diagram">   traffic nghĩ theo ĐƯỜNG           routing nghĩ theo ĐOẠN
+   osm:way/12345                     osm:way/12345#0
+   (thứ cảm biến và tài xế           osm:way/12345#1
+    đều nhận ra)                     osm:way/12345#2
+                                     (mỗi khúc giữa hai ngã tư)
+              │                                 ▲
+              │   mapdata.road_edges(khu vực)   │
+              └─────────────────────────────────┘
+                    PHẢI HỎI, KHÔNG ĐƯỢC ĐOÁN</pre>
+
+<div class="note bad">
+  <strong>Tự suy ra quy tắc <code>way#số</code> là cái bẫy nguy hiểm nhất ở đây.</strong>
+  <p>Hôm nay nó chạy đúng. Và nó sẽ hỏng <em>lặng lẽ</em> ngay lần đầu cách cắt
+  đường thay đổi — triệu chứng duy nhất là tuyến đường bỗng dưng phớt lờ kẹt xe,
+  không có lỗi nào được ghi ra.</p>
+</div>
+
+<h2>6. Nối với ai?</h2>
+
+<pre class="diagram">   các nguồn ──▶ ingest ──▶ Observations (chỉ số đo, KHÔNG có mức độ)
+                                │
+                                ▼  processing/attach.py
+                           RoadSpeed (mã đường, tốc độ, tốc độ thoáng, nguồn, độ tin)
+                                │
+                                ▼  state/store.py  TrafficState
+                           bức tranh hiện tại, hết hạn sau 10 phút
+                                │
+                ┌───────────────┴──────────────┐
+                ▼                              ▼
+        GET /api/v1/traffic          state/provider.py
+        (kèm nguồn gốc, cờ mô phỏng)  TrafficCostSource
+                                              │ {mã đoạn: hệ số}
+                                              ▼
+                                    routing.DynamicCostModel</pre>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Đầu nối</th><th>Nội dung trao đổi</th></tr></thead>
+<tbody>
+<tr><td><code>ingest → traffic</code></td><td>Các lô <code>Observations</code>: đã chuẩn hoá, độc lập nhà cung cấp, và <strong>không có mức độ</strong></td></tr>
+<tr><td><code>mapdata → traffic</code></td><td><code>road_edges(area)</code> — bảng mã đường → mã đoạn</td></tr>
+<tr><td><code>traffic → routing</code></td><td><code>multipliers_for(area)</code> → <code>{mã đoạn: số ≥ 1.0}</code>. Một từ điển thuần tuý; <strong>hai khối không import nhau</strong></td></tr>
+<tr><td><code>traffic → api</code></td><td><code>GET /api/v1/traffic</code> và <code>GET /api/v1/traffic/levels</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>7. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Toàn bộ mặt tiền công khai.</span></div>
+<div class="row"><span class="f">levels.py</span><span class="d">Bảng mức độ: ngưỡng, tên, màu, và <code>level_payload()</code> để phục vụ qua API. <strong>Chỗ duy nhất</strong> quyết định một tỉ lệ nghĩa là gì.</span></div>
+<div class="row"><span class="f">models.py</span><span class="d"><code>RoadSpeed</code> (kết luận về một con đường) và <code>TrafficSnapshot</code> (bức tranh một khu vực kèm nguồn gốc).</span></div>
+<div class="row"><span class="f dir">processing/attach.py</span><span class="d"><code>attach()</code> và <code>RoadIndex</code>: gắn số đo lên đúng con đường, bán kính 120 m.</span></div>
+<div class="row"><span class="f dir">processing/cost.py</span><span class="d"><code>multiplier_for()</code>: tỉ lệ → hệ số, có chặn trên 8.0.</span></div>
+<div class="row"><span class="f dir">state/store.py</span><span class="d"><code>TrafficState</code>: bức tranh hiện tại, xếp hạng khi mâu thuẫn, tự hết hạn sau <code>DEFAULT_MAX_AGE_S = 600</code> giây.</span></div>
+<div class="row"><span class="f dir">state/provider.py</span><span class="d"><code>TrafficCostSource</code>: đọc trạng thái, đổi mã đường sang mã đoạn qua mapdata, trả bảng hệ số cho routing.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">35 bài: gắn đường, xếp hạng, hết hạn, định giá.</span></div>
+</div>
+
+<h2>8. Luồng qua từng file</h2>
+
+<pre class="diagram">ingest.Observations  +  RoadSegment[] từ mapdata
+        │
+        ▼  processing/attach.py
+        │     bản ghi đã khai road_id  ──▶ thắng luôn
+        │     bản ghi dạng điểm        ──▶ bám đường gần nhất trong 120 m
+        │     xa hơn 120 m             ──▶ "không thuộc đường nào"
+        ▼
+   RoadSpeed(mã đường, km/h, km/h thoáng, nguồn, độ tin cậy, lúc nào)
+        │
+        ▼  state/store.py  TrafficState.apply()
+        │     xếp hạng: đo thật > độ tin cậy > độ mới   (không lấy trung bình)
+        │     bản ghi cũ hơn 600 giây rơi ra khỏi bức tranh
+        ▼
+   bức tranh hiện tại
+        │
+        ├──▶ models.TrafficSnapshot ──▶ api/routes/traffic.py
+        │       levels.py phân loại từng tỉ lệ ở bước này
+        │
+        ▼  state/provider.py  TrafficCostSource.multipliers_for(khu vực)
+        │     1. lấy các đường trong khu vực ra khỏi TrafficState
+        │     2. processing/cost.py đổi mỗi tỉ lệ thành hệ số, có chặn
+        │     3. mapdata.road_edges(khu vực) đổi mã đường sang mã đoạn
+        ▼
+   {mã đoạn: hệ số}  ──▶  routing.DynamicCostModel</pre>
+
+<h2>9. Khi nào dữ liệu được làm mới?</h2>
+
+<p><strong>Lười biếng, theo từng khu vực, và được kích hoạt bởi một yêu cầu tìm
+đường</strong> — không phải bởi một tiến trình chạy nền.</p>
+
+<div class="plain">
+  <p>Một tiến trình nền là thêm một thứ phải triển khai, phải giám sát, phải tắt
+  cho sạch; và nó sẽ đi hỏi những khu vực chẳng ai đang xem. Khu vực <em>cần</em>
+  tươi mới chính là khu vực đang được tìm đường qua, và thời điểm biết được điều
+  đó chính là lúc có người xin một tuyến đường.</p>
+  <p><code>POST /api/v1/ingest/refresh</code> tồn tại cho người vận hành muốn hâm
+  nóng một thành phố trước giờ cao điểm mà không phải giả vờ xin một tuyến đường.</p>
+</div>
+
+<h2>10. Ví dụ thật</h2>
+
+<h3>Hỏi tình hình giao thông</h3>
+<pre><code>GET /api/v1/traffic?bbox=106.69,10.77,106.71,10.79
+
+<span class="s">{
+  "status": "ok",
+  "taken_at": "2026-09-13T09:22:57.138004+00:00",
+  "sources": ["simulated"],
+  "simulated": true,          </span><span class="c">// MÔ HÌNH, không phải số đo</span><span class="s">
+  "failures": [],
+  "roads": [
+    {
+      "road_id": "osm:way/1006083160",
+      "speed_kph": 12.4,
+      "free_flow_kph": 50.0,
+      "ratio": 0.248,
+      "level": "standstill",
+      "source": "simulated",
+      "confidence": 0.15,
+      "sample_count": 1,
+      "simulated": true,
+      "observed_at": "2026-09-13T09:22:57.138004+00:00"
+    }, ...
+  ]
+}</span></code></pre>
+
+<p>Đọc bản ghi trên: 12,4 ÷ 50,0 = <strong>0,248</strong> → thấp hơn ngưỡng 0,25
+của <code>heavy</code> → phân loại <code>standstill</code>. Hệ số chi phí sẽ là
+1 ÷ 0,248 ≈ <strong>4,03</strong>, nằm trong chặn 8,0.</p>
+
+<h3>Lấy bảng mức độ</h3>
+<pre><code>GET /api/v1/traffic/levels
+
+<span class="s">{ "status": "ok", "levels": [
+  { "value": 0, "slug": "free_flow",  "label": "Free Flow",  "color": "#2fa84f", "min_ratio": 0.85 },
+  { "value": 1, "slug": "light",      "label": "Light",      "color": "#9ec93a", "min_ratio": 0.65 },
+  ...
+]}</span></code></pre>
+
+<h3>Khối này thay đổi tuyến đường ra sao — đo thật</h3>
+<pre><code><span class="c"># cùng chuyến đi, Quận 1, lúc cao điểm chiều</span>
+có tính kẹt xe :  2903.1 m   620.3 giây
+đường thoáng   :  2905.0 m   198.3 giây
+                             -------
+kẹt xe làm chậm thêm 422 giây, tức +213%</code></pre>
+
+<div class="note warn">
+  <strong>Vì sao Việt Nam lại là "mô phỏng"?</strong>
+  <p>Không có nguồn dữ liệu giao thông trực tiếp miễn phí nào cho Việt Nam. Thành
+  phố có cổng thông tin giao thông bằng camera nhưng không công bố API mở. Server
+  lấp chỗ trống đó bằng một mô hình tất định (hai đỉnh giờ cao điểm, một bướu buổi
+  trưa, áp lực khác nhau theo loại đường, cộng một hằng số riêng cho từng đoạn
+  băm từ mã đường — nên cùng một con phố luôn là con phố xấu).</p>
+  <p>Và mọi bản ghi đều mang <code>source: "simulated"</code>, API báo
+  <code>simulated: true</code>. Không ai bị nhầm mô hình với số đo.</p>
+</div>
+
+<h2>11. Những gì không được chạm vào</h2>
+
+<ul>
+  <li><code>traffic.processing.*</code>, <code>traffic.state.*</code> — hãy
+  <code>from traffic import ...</code></li>
+  <li>Cách <code>TrafficState</code> ghi sổ chuyện hết hạn</li>
+  <li>Giá trị ngưỡng và màu cụ thể — đây là quyết định sản phẩm và <em>được
+  mong đợi</em> là sẽ thay đổi</li>
+  <li><strong>Không module nào khác được quyết định một tỉ lệ nghĩa là gì.</strong>
+  <code>levels.py</code> là chỗ duy nhất.</li>
+</ul>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

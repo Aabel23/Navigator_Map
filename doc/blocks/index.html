@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tổng quan hệ thống — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html" class="active"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>Tổng quan hệ thống</h1>
+    <p class="lead">Một ứng dụng dẫn đường tự viết, chỉ dùng dữ liệu miễn phí. Trang này giải thích hệ thống gồm những gì và một chuyến đi được tính ra như thế nào.</p>
+    <div class="badges"><span class="badge badge-brand">10 khối server</span><span class="badge badge-neutral">2 khối client</span><span class="badge badge-good">796 bài kiểm thử</span><span class="badge badge-neutral">Cập nhật 13/09/2026</span></div>
+  </header>
+  
+<div class="note">
+  <strong>Nếu bạn chưa biết gì về dự án này, hãy đọc hết trang này trước.</strong>
+  <p>Trang này giải thích hệ thống làm gì, được chia thành những phần nào, và một
+  chuyến đi được tính ra như thế nào. Sau khi hiểu bức tranh chung, hãy bấm vào
+  từng khối ở thanh bên trái để đọc chi tiết.</p>
+</div>
+
+<h2>1. Hệ thống này làm gì?</h2>
+
+<p>Đây là phần “bộ não” của một ứng dụng chỉ đường cho tài xế — giống Google Maps,
+nhưng tự viết từ đầu và chỉ dùng dữ liệu miễn phí.</p>
+
+<p>Nó trả lời <strong>một câu hỏi chính</strong>:</p>
+
+<div class="plain">
+  <span class="plain-tag">Câu hỏi trung tâm</span>
+  <p style="font-size:18px;margin:0"><em>“Ngay bây giờ, tài xế này nên đi từ đây
+  đến kia bằng đường nào?”</em></p>
+</div>
+
+<p>Và bốn câu hỏi phụ khiến câu trả lời trên có ích:</p>
+
+<ul>
+  <li><strong>Có những con đường nào?</strong> → khối <code>mapdata</code></li>
+  <li><strong>Xe đang chạy nhanh hay chậm?</strong> → khối <code>traffic</code></li>
+  <li><strong>Đường nào đang cấm, ngập, đang sửa?</strong> → khối <code>roadstate</code></li>
+  <li><strong>Thế giới bên ngoài vừa báo gì?</strong> → khối <code>ingest</code></li>
+</ul>
+
+<h2>2. “Khối” (block) là gì?</h2>
+
+<div class="plain">
+  <span class="plain-tag">Ví von cho người mới</span>
+  <p>Hãy tưởng tượng một nhà hàng. Có <em>bếp</em>, có <em>kho</em>, có
+  <em>người phục vụ</em>, có <em>người nhận hàng từ nhà cung cấp</em>. Mỗi người
+  làm đúng một việc, và họ nói chuyện với nhau bằng những “phiếu” quy định sẵn —
+  phiếu gọi món, phiếu xuất kho. Người phục vụ không tự vào bếp xào nấu; đầu bếp
+  không tự chạy ra bàn tính tiền.</p>
+  <p>Một <strong>khối</strong> ở đây chính là một “người” như vậy trong phần mềm:
+  một thư mục mã nguồn có <em>đúng một trách nhiệm</em>. Còn tờ “phiếu” giữa hai
+  khối thì gọi là <strong>connector</strong> (đầu nối) — một bản cam kết ghi rõ:
+  tôi nhận vào cái gì, tôi trả ra cái gì.</p>
+</div>
+
+<p>Vì sao phải chia nhỏ như vậy? Vì khi cần sửa cách tính “kẹt xe nặng là bao
+nhiêu”, bạn chỉ cần vào đúng một file, và chắc chắn rằng phần tìm đường không
+hỏng theo. Toàn bộ tài liệu này được viết để bạn luôn biết <em>phải vào đâu</em>.</p>
+
+<div class="note good">
+  <strong>Quy tắc này không chỉ nằm trên giấy.</strong>
+  <p>File <code>server/tests/test_dependency_rules.py</code> đọc từng dòng mã và
+  <em>làm hỏng bản build</em> nếu một khối lỡ gọi sang khối nó không được phép
+  gọi, nếu có vòng lặp phụ thuộc, nếu <code>sqlite3</code> xuất hiện ngoài
+  <code>storage/sqlite/</code>, hay nếu <code>flask</code> xuất hiện ngoài
+  <code>api/</code>. Có 280 phép kiểm tra như thế, trong tổng số 796 bài kiểm thử.</p>
+</div>
+
+<h2>3. Ba phần lớn của dự án</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Phần</th><th>Nằm ở</th><th>Làm gì</th><th>Chạy ở đâu</th></tr></thead>
+<tbody>
+<tr><td><strong>Server</strong></td><td><code>server/</code></td>
+<td>Tính toán tất cả: đường đi, giao thông, tình trạng đường, dữ liệu bản đồ, lưu trữ</td>
+<td>Máy chủ</td></tr>
+<tr><td><strong>Client</strong></td><td><code>client/</code></td>
+<td>Vẽ bản đồ lên màn hình, xử lý tín hiệu GPS của thiết bị</td>
+<td>Điện thoại / trình duyệt</td></tr>
+<tr><td><strong>Sandbox</strong></td><td><code>sandbox/</code></td>
+<td>Bản demo để xem hệ thống chạy thật. Không phải khối, không ai được import nó</td>
+<td>Máy lập trình viên</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note warn">
+  <strong>Ranh giới quan trọng nhất: server tính đường, client chỉ vẽ.</strong>
+  <p>Client gửi lên hai toạ độ và nhận về một tuyến đường. Nó <em>không</em> giữ
+  bản đồ đường sá, không có mô hình chi phí, không có thuật toán tìm kiếm. Đây
+  không phải quyết định về tốc độ, mà là về <em>quyền sở hữu</em>: nếu tính đường
+  trên máy, thì mỗi máy sẽ tính bằng dữ liệu nó tình cờ có, và hai điện thoại sẽ
+  trả lời khác nhau cho cùng một câu hỏi.</p>
+</div>
+
+<h2>4. Sơ đồ toàn hệ thống</h2>
+
+<pre class="diagram">                    ĐIỆN THOẠI / TRÌNH DUYỆT
+                    (client/map, client/location)
+                              │
+                              │  HTTPS · JSON
+                              ▼
+                    ┌───────────────────┐
+                    │        api        │   cổng ra vào duy nhất
+                    └─────────┬─────────┘
+                              │
+         ┌────────────┬───────┴────────┬─────────────┐
+         ▼            ▼                ▼             ▼
+    ┌─────────┐  ┌─────────┐    ┌───────────┐  ┌─────────┐
+    │ mapdata │  │ traffic │    │ roadstate │  │ ingest  │
+    │ đường   │  │ kẹt xe  │    │ cấm/ngập  │  │ cửa vào │
+    └────┬────┘  └────┬────┘    └─────┬─────┘  └────┬────┘
+         │            │               │             │
+         └──────┬─────┴───────┬───────┴──────┬──────┘
+                ▼             ▼              ▼
+          ┌─────────┐   ┌─────────┐   ┌───────────────┐
+          │ routing │   │ storage │   │ observability │
+          │ tìm đường│   │ lưu trữ │   │ log · sức khoẻ│
+          └────┬────┘   └────┬────┘   └───────┬───────┘
+               └─────────────┴────────────────┘
+                              ▼
+                        ┌──────────┐
+                        │  domain  │  từ vựng chung
+                        └──────────┘         (BBox, GeoPoint)</pre>
+
+<div class="note">
+  <strong>Có một điều trông ngược đời trong sơ đồ trên, và nó cố ý.</strong>
+  <p><code>routing</code> nằm <em>dưới</em> <code>mapdata</code>, <code>traffic</code>,
+  <code>roadstate</code> chứ không nằm ngang hàng. Lý do: cả ba khối đó đều
+  <em>cung cấp</em> thứ mà routing tiêu thụ — một đồ thị đường, một hệ số chi phí,
+  một ràng buộc. Nên ba khối đó được phép import kiểu dữ liệu của routing, còn
+  routing thì <strong>không import khối nào cả</strong>. Đây là chiều phụ thuộc
+  thông thường giữa “thiết bị cắm vào” và “ổ cắm”, và chính nó khiến bộ máy tìm
+  đường có thể đem đi đo hiệu năng, kiểm thử hợp đồng và thay thế một mình.</p>
+</div>
+
+<h2>5. Mười khối của server</h2>
+
+<div class="cards">
+  <a class="card" href="api.html"><span class="card-ico">🌐</span><h4>api</h4>
+  <p>Cổng HTTP duy nhất. Đọc yêu cầu, gọi <em>một</em> dịch vụ, trả JSON. Không tính toán gì.</p></a>
+
+  <a class="card" href="routing.html"><span class="card-ico">🧭</span><h4>routing</h4>
+  <p>Bộ máy tìm đường A*. Nhận đồ thị + mô hình chi phí, trả về tuyến đường và các bước rẽ.</p></a>
+
+  <a class="card" href="mapdata.html"><span class="card-ico">🗺️</span><h4>mapdata</h4>
+  <p>Sở hữu mạng lưới đường và đồ thị có thể tìm kiếm. Cắt “way” thành “edge”, và snap toạ độ về nút.</p></a>
+
+  <a class="card" href="traffic.html"><span class="card-ico">🚦</span><h4>traffic</h4>
+  <p>Quyết định một tốc độ <em>có nghĩa là gì</em> và nó khiến chuyến đi đắt thêm bao nhiêu.</p></a>
+
+  <a class="card" href="roadstate.html"><span class="card-ico">🚧</span><h4>roadstate</h4>
+  <p>Đường cấm, ngập, đang thi công, tai nạn — và thời hạn hiệu lực của chúng.</p></a>
+
+  <a class="card" href="ingest.html"><span class="card-ico">📥</span><h4>ingest</h4>
+  <p>Cánh cửa duy nhất mà dữ liệu bên ngoài đi vào. Nhận, kiểm tra, chuẩn hoá — và không phán xét.</p></a>
+
+  <a class="card" href="storage.html"><span class="card-ico">💾</span><h4>storage</h4>
+  <p>Lưu và tìm lại các byte. Không biết byte đó nghĩa là gì. Đổi được từ SQLite sang PostgreSQL.</p></a>
+
+  <a class="card" href="domain.html"><span class="card-ico">📐</span><h4>domain</h4>
+  <p>Từ vựng địa lý chung: hình chữ nhật, điểm, và bảng tra “cái gì gần đây nhất”.</p></a>
+
+  <a class="card" href="config.html"><span class="card-ico">⚙️</span><h4>config</h4>
+  <p>Mọi thứ một lần triển khai được phép đổi, đọc một lần duy nhất từ biến môi trường.</p></a>
+
+  <a class="card" href="observability.html"><span class="card-ico">❤️</span><h4>observability</h4>
+  <p>Ghi log và trả lời câu hỏi “máy chủ này còn sống và dùng được không?”.</p></a>
+</div>
+
+<h3>Và hai khối phía client</h3>
+
+<div class="cards">
+  <a class="card" href="client-map.html"><span class="card-ico">🖼️</span><h4>client/map</h4>
+  <p>Bộ vẽ bản đồ WebGL2 tự viết: giải mã vector tile, dựng hình, vẽ nhãn tiếng Việt.</p></a>
+
+  <a class="card" href="client-location.html"><span class="card-ico">📍</span><h4>client/location</h4>
+  <p>Biến tín hiệu GPS thô của thiết bị thành một dòng vị trí sạch, đã lọc nhiễu.</p></a>
+</div>
+
+<h2>6. Một chuyến đi được tính ra như thế nào</h2>
+
+<p>Đây là luồng quan trọng nhất trong toàn hệ thống. Nó đi qua <em>tất cả</em> các khối.</p>
+
+<ol class="steps">
+  <li>
+    <h4>Người dùng bấm hai điểm trên bản đồ</h4>
+    <p>Client gửi lên: <code>POST /api/v1/route</code> với
+    <code>{"origin": [106.6985, 10.7770], "destination": [106.7180, 10.7730]}</code>.
+    Kinh độ đứng trước vĩ độ — quy ước GeoJSON, đúng ở mọi nơi trong dự án.</p>
+  </li>
+  <li>
+    <h4><code>api</code> đọc yêu cầu — và chỉ đọc</h4>
+    <p>File <code>api/routes/route.py</code> dài đúng ba câu lệnh: phân tích
+    yêu cầu, gọi một dịch vụ, chuyển kết quả thành JSON. Không có vòng lặp,
+    không có quyết định nào.</p>
+  </li>
+  <li>
+    <h4><code>mapdata</code> chuẩn bị bản đồ cho khu vực đó</h4>
+    <p>Tải hình học đường từ <strong>OpenStreetMap</strong> (qua Overpass API,
+    miễn phí, không cần khoá), rồi <em>cắt</em> mỗi con đường tại mọi ngã tư để
+    biến nó thành đồ thị có thể tìm kiếm. Lần đầu cho một khu vực mất hàng chục
+    giây; sau đó được nhớ đệm và gần như tức thì.</p>
+  </li>
+  <li>
+    <h4><code>mapdata</code> biến toạ độ thành “số hiệu nút”</h4>
+    <p>Điểm bạn bấm rơi giữa lòng đường chứ không trúng ngã tư nào. Khối này tìm
+    ngã tư gần nhất và trả về mã của nó. Việc này <em>không</em> làm trong routing —
+    nếu làm ở hai nơi, hệ thống sẽ có hai ý kiến khác nhau về việc tài xế đang ở đâu.</p>
+  </li>
+  <li>
+    <h4><code>traffic</code> nói mỗi đoạn đường đang chậm bao nhiêu lần</h4>
+    <p>Trả về một bảng đơn giản: <code>{mã đoạn đường: hệ số}</code>, mỗi hệ số
+    luôn ≥ 1.0. Đường chạy bằng nửa tốc độ thoáng thì hệ số là 2.0.</p>
+  </li>
+  <li>
+    <h4><code>roadstate</code> nói đoạn nào <em>cấm hẳn</em></h4>
+    <p>Đường ngập sâu, đường đóng — những thứ này <strong>không</strong> là chi phí,
+    chúng là <em>ràng buộc</em>. Xem mục 7 để hiểu vì sao phân biệt này sống còn.</p>
+  </li>
+  <li>
+    <h4><code>routing</code> chạy thuật toán A*</h4>
+    <p>Có đồ thị, có hai mã nút, có bảng chi phí, có danh sách đoạn bị cấm — bây
+    giờ mới thực sự tìm đường. Kết quả: đường vẽ được, danh sách bước rẽ kèm tên
+    phố thật, quãng đường, thời gian.</p>
+  </li>
+  <li>
+    <h4><code>api</code> trả JSON về</h4>
+    <p>Đổi lại thứ tự toạ độ cho đúng GeoJSON, <em>bỏ</em> trường
+    <code>total_cost</code> (xem mục 8), và gửi đi.</p>
+  </li>
+</ol>
+
+<h3>Kết quả thật, đo ngày 13/09/2026 tại Quận 1, TP.HCM</h3>
+
+<pre><code><span class="c"># Cùng một chuyến đi, hỏi hai lần: có tính kẹt xe và không tính</span>
+với kẹt xe :   2903.1 m    620.3 giây
+đường thoáng:  2905.0 m    198.3 giây
+<span class="c"># kẹt xe làm chuyến đi dài thêm 422 giây — hơn gấp ba lần</span></code></pre>
+
+<h2>7. Hai cặp khái niệm không bao giờ được nhập làm một</h2>
+
+<div class="note bad">
+  <strong>Kẹt xe ≠ Cấm đường</strong>
+  <p>Kẹt xe đi vào bộ tìm đường dưới dạng <em>hệ số nhân chi phí</em>. Cấm đường
+  đi vào dưới dạng <em>ràng buộc</em> — đoạn đó bị gạch khỏi danh sách lựa chọn.</p>
+  <p>Vì sao không dùng “chi phí rất lớn” cho đường cấm? Vì khi <em>không còn
+  đường nào khác</em> nối hai đầu chuyến đi, thuật toán sẽ vui vẻ dùng con đường
+  “đắt” đó và trả về một tuyến chạy thẳng qua phố đang ngập — triệu chứng duy nhất
+  là thời gian dự kiến hơi dài bất thường. Một ràng buộc thì không thể mặc cả
+  được, nên câu trả lời trung thực — “không có đường” — mới là thứ quay về.</p>
+</div>
+
+<div class="note bad">
+  <strong>Mã đường (road id) ≠ Mã đoạn (edge id)</strong>
+  <p><code>traffic</code> và <code>roadstate</code> đánh chỉ mục theo
+  <em>con đường</em>: <code>osm:way/12345</code> — thứ mà cảm biến và tài xế đều
+  nhận ra. <code>routing</code> đánh chỉ mục theo <em>đoạn</em>:
+  <code>osm:way/12345#2</code> — một khúc giữa hai ngã tư.</p>
+  <p>Cây cầu nối hai thứ này là <code>mapdata.road_edges(area)</code>, và nó phải
+  được <strong>hỏi</strong>, không bao giờ được đoán. Tự suy ra quy tắc
+  <code>way#số</code> thì hôm nay vẫn chạy, và sẽ hỏng lặng lẽ ngay lần đầu cách
+  cắt đường thay đổi — triệu chứng duy nhất là tuyến đường bỗng phớt lờ kẹt xe.</p>
+</div>
+
+<h2>8. Vài quyết định trông nhỏ nhưng rất quan trọng</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Quy tắc</th><th>Vì sao</th></tr></thead>
+<tbody>
+<tr><td>Hệ số nhân <strong>không bao giờ</strong> nhỏ hơn 1.0</td>
+<td>Nhỏ hơn 1.0 làm hàm ước lượng của A* mất tính “không vượt quá” — và điều đó
+<em>không báo lỗi</em>, nó chỉ lặng lẽ trả về một tuyến đường tệ hơn.</td></tr>
+
+<tr><td>Kẹt xe nặng nhất bị chặn ở <strong>8 lần</strong></td>
+<td>Kẹt xe không phải cấm đường. Cấm đường có đường đi riêng.</td></tr>
+
+<tr><td>API <strong>không công bố</strong> <code>total_cost</code></td>
+<td>Đó là con số thuật toán tối thiểu hoá, có thể đã bị nhân với hệ số ưu tiên
+loại đường. Một client nhìn thấy nó, sớm muộn cũng có người đem hiển thị như
+thời gian. Thời gian dự kiến là <code>duration_s</code>, lấy từ
+<code>travel_time</code>, là giây thật theo cách nó được xây.</td></tr>
+
+<tr><td>Dữ liệu <em>mô phỏng</em> luôn tự khai báo</td>
+<td>Việt Nam không có nguồn dữ liệu giao thông trực tiếp miễn phí nào. Server mô
+phỏng và gắn nhãn <code>source: "simulated"</code> lên từng bản ghi, API báo
+<code>simulated: true</code>. Không ai — kể cả tài xế — bị nhầm mô hình với đo đạc.</td></tr>
+
+<tr><td>Chỉ dùng nguồn dữ liệu <strong>miễn phí, không cần khoá</strong></td>
+<td>Đây là quy tắc của dự án, không phải sự tình cờ.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>9. Dữ liệu đến từ đâu (và có mất tiền không)</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Nguồn</th><th>Cho cái gì</th><th>Phạm vi</th><th>Khoá API</th><th>Khối nào gọi</th></tr></thead>
+<tbody>
+<tr><td><a href="https://overpass-api.de/">Overpass / OpenStreetMap</a></td>
+<td>hình học đường, loại đường, <code>maxspeed</code>, đường một chiều</td>
+<td>toàn thế giới</td><td>không cần</td><td><code>mapdata</code></td></tr>
+
+<tr><td><a href="https://www.digitraffic.fi/en/road-traffic/">Digitraffic</a> (Fintraffic)</td>
+<td>tốc độ <em>đo thật</em> từ cảm biến ven đường, tai nạn, công trình</td>
+<td>Phần Lan</td><td>không cần</td><td><code>ingest</code></td></tr>
+
+<tr><td><a href="https://openfreemap.org/">OpenFreeMap</a></td>
+<td>vector tile, phông chữ, bộ icon để vẽ bản đồ</td>
+<td>toàn thế giới</td><td>không cần</td><td><code>client/map</code></td></tr>
+
+<tr><td>GPS probe từ client</td><td>tốc độ ở nơi tài xế thật đang chạy</td>
+<td>nơi nào có người dùng</td><td>—</td><td><code>ingest</code></td></tr>
+
+<tr><td><code>SimulatedTrafficProvider</code></td><td>mô hình kẹt xe tất định</td>
+<td>bất cứ đâu</td><td>—</td><td><code>ingest</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note warn">
+  <strong>Nghĩa vụ ghi công.</strong>
+  <p>Dữ liệu OSM thuộc © những người đóng góp OpenStreetMap, giấy phép ODbL.
+  Dữ liệu Digitraffic do Fintraffic công bố theo CC BY 4.0. Cả hai
+  <em>bắt buộc</em> phải được ghi công ở bất cứ đâu hiển thị kết quả.</p>
+</div>
+
+<h2>10. Cách chạy thử</h2>
+
+<pre><code><span class="c"># chạy máy chủ và toàn bộ bài kiểm thử</span>
+cd server
+python -m pip install -r requirements.txt
+python main.py --check        <span class="c"># dựng mọi thứ, kiểm tra sức khoẻ, thoát</span>
+python -m pytest              <span class="c"># 796 bài kiểm thử</span>
+python main.py                <span class="c"># máy chủ ở 127.0.0.1:8000</span>
+
+<span class="c"># hoặc mở thẳng bản demo có bản đồ, tự chạy server bên trong</span>
+cd sandbox/map_demo
+python main.py                <span class="c"># mở http://127.0.0.1:1540/</span></code></pre>
+
+<p>Thử gọi API bằng tay:</p>
+
+<pre><code>curl -s localhost:8000/api/v1/route -H <span class="s">'Content-Type: application/json'</span> -d <span class="s">'{
+  "origin":      [106.6985, 10.7770],
+  "destination": [106.7180, 10.7730]
+}'</span></code></pre>
+
+<h2>11. Đọc tiếp theo thứ tự nào?</h2>
+
+<ol>
+  <li>Nếu bạn muốn hiểu <em>kết quả</em> đến từ đâu: <a href="routing.html">routing</a> →
+      <a href="mapdata.html">mapdata</a> → <a href="traffic.html">traffic</a> →
+      <a href="roadstate.html">roadstate</a>.</li>
+  <li>Nếu bạn muốn hiểu <em>dữ liệu</em> đi vào thế nào: <a href="ingest.html">ingest</a> →
+      <a href="storage.html">storage</a>.</li>
+  <li>Nếu bạn muốn hiểu <em>client nói chuyện với server</em> ra sao:
+      <a href="api.html">api</a> → <a href="client-map.html">client/map</a> →
+      <a href="sandbox-demo.html">sandbox/map_demo</a>.</li>
+  <li>Ba khối nền móng (<a href="domain.html">domain</a>, <a href="config.html">config</a>,
+      <a href="observability.html">observability</a>) rất nhỏ và có thể đọc bất cứ lúc nào.</li>
+</ol>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

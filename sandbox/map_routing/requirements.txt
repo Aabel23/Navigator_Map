@@ -1,0 +1,8 @@
+# Flask, and nothing else.
+#
+# The routing block and the traffic block are both stdlib-only, and the map
+# block's only requirement is the same Flask this asks for -- so the whole
+# simulator runs on one dependency. That is worth keeping: a sandbox that
+# needed a build step would stop being the quickest way to check whether the
+# three blocks still fit together.
+flask>=3.0

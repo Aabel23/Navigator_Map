@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>observability — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html" class="active"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>observability</h1>
+    <p class="lead">Hình dạng log, nơi log đi về, và định nghĩa của 'máy chủ này đang làm việc'. Cài đặt một lần cho cả tiến trình.</p>
+    <div class="badges"><span class="badge badge-good">10 bài kiểm thử</span><span class="badge badge-brand">3 điểm cuối sức khoẻ</span><span class="badge badge-warn">'Suy giảm' ≠ 'chưa sẵn sàng'</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Quyết định một dòng log có hình dạng thế nào và đi về đâu</strong>, và
+<strong>trả lời câu hỏi “máy chủ này có đang làm việc không”</strong>. Cài đặt một
+lần, cho cả tiến trình.</p>
+
+<div class="note">
+  <strong>Nó không quyết định <em>cái gì đáng ghi log</em>.</strong>
+  <p>Việc đó do từng khối tự quyết, bằng cách gọi <code>get_logger</code>. Không
+  có gì ở đây thò tay vào một khối để gắn thiết bị đo lên nó.</p>
+</div>
+
+<h2>2. Những gì được công bố</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tên</th><th>Làm gì</th></tr></thead>
+<tbody>
+<tr><td><code>configure(level, as_json)</code></td><td>Cài đặt cấu hình log, một lần duy nhất</td></tr>
+<tr><td><code>get_logger(name)</code></td><td>Một logger mà khối nào cũng có thể xin</td></tr>
+<tr><td><code>JsonFormatter</code></td><td>Mỗi bản ghi là một dòng JSON, cho hệ thống thu thập log</td></tr>
+<tr><td><code>HealthRegistry</code></td><td>Tập các phép kiểm tra có tên, chạy cùng nhau</td></tr>
+<tr><td><code>Check</code>, <code>CheckResult</code></td><td>Một phép kiểm tra và kết quả nó báo về</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>3. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Mặt tiền công khai.</span></div>
+<div class="row"><span class="f">logging.py</span><span class="d"><code>configure()</code>, <code>get_logger()</code>, <code>JsonFormatter</code>.</span></div>
+<div class="row"><span class="f">health.py</span><span class="d"><code>Check</code>, <code>CheckResult</code>, <code>HealthRegistry</code>.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">10 bài.</span></div>
+</div>
+
+<h3>Hai file này phối hợp ra sao? Chúng <em>không</em> — và đó là chủ ý</h3>
+
+<p><code>logging.py</code> và <code>health.py</code> không chia sẻ gì ngoài việc
+cùng nằm trong một khối, bởi vì chúng là hai nửa của một câu hỏi được đặt ra bởi
+hai đối tượng khác nhau: <strong>một con người đang đọc log</strong>, và
+<strong>một bộ cân bằng tải đang đọc mã trạng thái</strong>.</p>
+
+<p>Để chung một khối giữ cho cả hai câu trả lời được cấu hình ở một chỗ lúc khởi
+động; tách thành hai module giữ cho việc đổi hình dạng log không đụng tới định
+nghĩa “sẵn sàng”.</p>
+
+<h2>4. Ba điểm cuối sức khoẻ, và sự khác nhau giữa hai cái đầu</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Điểm cuối</th><th>Trả lời</th><th>Chạy kiểm tra?</th></tr></thead>
+<tbody>
+<tr><td><code>GET /health</code></td><td>Tiến trình còn sống không</td><td><strong>Không</strong> — không kiểm tra gì cả</td></tr>
+<tr><td><code>GET /health/ready</code></td><td>Có phục vụ được không</td><td>Có, mọi phép đã đăng ký. Trả 503 khi một phép <em>trọng yếu</em> hỏng</td></tr>
+<tr><td><code>GET /health/info</code></td><td>Server được lắp ráp bằng những gì</td><td>Không</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note warn">
+  <strong>“Suy giảm” được báo riêng, không lẫn với “chưa sẵn sàng”.</strong>
+  <p>Thiếu một feed giao thông là <em>suy giảm</em> — tuyến đường vẫn tính được
+  theo tốc độ thoáng. Coi đó là hỏng nặng sẽ rút một tiến trình đang phục vụ tốt
+  ra khỏi vòng cân bằng tải, chỉ vì một tính năng vốn sống thiếu được một cách
+  đàng hoàng.</p>
+</div>
+
+<h2>5. Nối với ai?</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Đầu nối</th><th>Nội dung</th></tr></thead>
+<tbody>
+<tr><td><code>observability → mọi khối</code></td><td>Khối nào cũng được gọi <code>get_logger</code>. Phụ thuộc một chiều, và là quan hệ duy nhất khối này có với phần còn lại</td></tr>
+<tr><td><code>api → observability</code></td><td><code>composition.py</code> gọi <code>configure</code> một lần và đăng ký các phép kiểm tra; <code>routes/health.py</code> chạy chúng và ánh xạ kết quả sang mã trạng thái</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note good">
+  <strong><code>configure</code> chỉ được gọi một lần, bởi nơi lắp ráp.</strong>
+  <p>Một khối mà gọi lại nó sẽ cướp quyền cấu hình khỏi người đã đặt.</p>
+</div>
+
+<h2>6. Ví dụ thật</h2>
+
+<pre><code><span class="c"># trong composition.py, một lần duy nhất lúc khởi động</span>
+<span class="k">from</span> observability <span class="k">import</span> configure, get_logger, HealthRegistry
+
+configure(level=<span class="s">"INFO"</span>, as_json=<span class="k">False</span>)
+log = get_logger(<span class="s">"api"</span>)
+
+<span class="c"># trong một khối bất kỳ</span>
+log = get_logger(<span class="s">"traffic"</span>)
+log.warning(<span class="s">"traffic source failed"</span>, extra={<span class="s">"source"</span>: name, <span class="s">"error"</span>: err})</code></pre>
+
+<h3>Log thật khi chạy</h3>
+<pre><code>2026-09-13 16:22:51,945 INFO    server.api  server composed
+2026-09-13 16:22:52,885 INFO    server.api.request  GET /api/v1/mapdata/graph -> 200
+2026-09-13 16:22:58,995 INFO    server.api.request  POST /api/v1/route -> 200</code></pre>
+
+<h3>Kết quả kiểm tra sức khoẻ thật</h3>
+<pre><code>GET /health/ready
+
+<span class="s">{
+  "status": "ok",
+  "ready": true,
+  "degraded": [],
+  "checks": [
+    { "name": "storage",   "ok": true, "critical": true,  "duration_ms": 0.05 },
+    { "name": "mapdata",   "ok": true, "critical": true,  "duration_ms": 0.02 },
+    { "name": "roadstate", "ok": true, "critical": false,
+      "detail": { "stored": 1, "open_ended_ttl_s": 21600.0 }, "duration_ms": 0.11 }
+  ]
+}</span></code></pre>
+
+<p>Chú ý cột <code>critical</code>: chỉ những phép trọng yếu mới kéo
+<code>ready</code> xuống <code>false</code>. <code>roadstate</code> không trọng
+yếu — mất nó thì tuyến đường vẫn tính được, chỉ là không biết đường nào đang cấm.</p>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

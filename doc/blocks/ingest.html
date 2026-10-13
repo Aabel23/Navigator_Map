@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ingest — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html" class="active"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>ingest</h1>
+    <p class="lead">Cánh cửa duy nhất mà dữ liệu bên ngoài đi vào. Nhận, kiểm tra, chuẩn hoá, ghi nguồn gốc — và tuyệt đối không phán xét ý nghĩa.</p>
+    <div class="badges"><span class="badge badge-brand">Gọi Digitraffic API</span><span class="badge badge-good">Miễn phí, không cần khoá</span><span class="badge badge-good">27 bài kiểm thử</span><span class="badge badge-bad">Không tính mức độ ở đây</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Là cánh cửa duy nhất mà dữ liệu từ bên ngoài đi vào hệ thống.</strong>
+Nhận, kiểm tra, chuẩn hoá, đóng dấu thời gian, ghi nguồn gốc — và sống sót khi
+một nguồn tin chết.</p>
+
+<div class="note bad">
+  <strong>Và nó tuyệt đối KHÔNG phán xét ý nghĩa.</strong>
+  <p>Bản ghi rời khỏi đây <em>không mang mức độ kẹt xe</em>. Báo cáo rời khỏi đây
+  <em>không mang loại tình trạng</em>. Thứ đi ra là <em>thứ nguồn tin đã nói</em>:
+  một tốc độ, một mốc tốc độ thoáng, một tiêu đề, một khoảng thời gian.</p>
+  <p>Việc diễn giải xảy ra ở khối kế tiếp, tại một chỗ duy nhất, cho mọi nhà cung
+  cấp cùng lúc. Chính điều đó cho phép thêm nhà cung cấp thứ hai mà không kèm theo
+  một ý kiến thứ hai.</p>
+</div>
+
+<div class="plain">
+  <span class="plain-tag">Ví von cho người mới</span>
+  <p>Hãy nghĩ về bộ phận nhận hàng của một nhà máy. Xe tải từ mười nhà cung cấp
+  khác nhau đến, mỗi xe dùng một loại thùng, một loại phiếu giao, một ngôn ngữ.
+  Bộ phận nhận hàng đếm, kiểm tra hàng có hỏng không, dán nhãn “đến lúc mấy giờ,
+  từ ai”, rồi xếp tất cả vào <em>cùng một loại kệ</em>.</p>
+  <p>Họ <em>không</em> quyết định lô hàng này tốt hay xấu, đắt hay rẻ, dùng vào
+  việc gì. Đó là việc của xưởng sản xuất. Khối <code>ingest</code> chính là bộ
+  phận nhận hàng đó.</p>
+</div>
+
+<h2>2. Ba cánh cửa vào</h2>
+
+<pre class="diagram">  feed bên ngoài           GPS probe              báo cáo sự cố
+  (Digitraffic,            (từ client)            (người vận hành, client)
+   mô phỏng)                    │                        │
+       │  http.py               │                        │
+       ▼                        ▼                        ▼
+  traffic/collector.py    gps/probes.py          incidents/reports.py
+   định tuyến theo         kiểm tra nghiêm        kiểm tra hình dạng
+     vùng phủ               loại điểm vô lý        đóng dấu nguồn gốc
+   đo thật > mô phỏng       bỏ xe đứng yên
+   lỗi được cô lập
+       │                        │                        │
+       └───────────┬────────────┘                        │
+                   ▼                                     ▼
+             Observations                     báo cáo đã chuẩn hoá
+                   │                                     │
+                   ▼                                     ▼
+          traffic.attach / TrafficState          roadstate.classify</pre>
+
+<h2>3. Ba chính sách của bộ thu thập</h2>
+
+<ol class="steps">
+  <li>
+    <h4>Định tuyến theo vùng phủ</h4>
+    <p>Nhà cung cấp nào tự khai một vùng thì chỉ được hỏi về các ô nằm trong vùng
+    đó. Một mạng cảm biến Phần Lan khi bị hỏi về TP.HCM sẽ nói <em>“không thuộc
+    phần tôi”</em> — chứ không trả về kết quả rỗng, vì kết quả rỗng đọc lên
+    <em>y hệt như một thành phố đang thông thoáng</em>.</p>
+  </li>
+  <li>
+    <h4>Đo thật đứng trước mô phỏng</h4>
+    <p>Nhà cung cấp dự phòng chỉ được hỏi ở nơi <em>không</em> nhà cung cấp đo đạc
+    nào trả về gì. Mô hình không bao giờ cạnh tranh với cảm biến.</p>
+  </li>
+  <li>
+    <h4>Một lỗi không phải là thảm hoạ — và nó được gọi tên</h4>
+    <p>Nhà cung cấp nào ném lỗi sẽ bị loại khỏi lần làm mới đó và được ghi nhận
+    <strong>kèm tên</strong>, rồi danh sách lỗi được <em>trả về</em> chứ không
+    phải ghi log rồi quên.</p>
+    <p>Một tấm bản đồ lặng lẽ hiển thị thành phố trống rỗng vì một feed vừa hết
+    giờ chờ thì tệ hơn một tấm bản đồ nói thẳng rằng feed đã hết giờ chờ.</p>
+  </li>
+</ol>
+
+<h2>4. Có gọi API bên ngoài không?</h2>
+
+<div class="note good">
+  <strong>Có — đây là khối duy nhất gọi các nguồn dữ liệu giao thông.</strong>
+</div>
+
+<h3>4.1 Digitraffic (Fintraffic, Phần Lan) — nguồn tham chiếu</h3>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Mục</th><th>Giá trị</th></tr></thead>
+<tbody>
+<tr><td>Địa chỉ gốc</td><td><code>https://tie.digitraffic.fi</code></td></tr>
+<tr><td>Khoá API</td><td><strong>Không cần.</strong> Không đăng ký, không hạn mức, không có gói trả phí nào phía sau gói miễn phí</td></tr>
+<tr><td>Định dạng</td><td>JSON (không phải DATEX II XML như hầu hết các nước)</td></tr>
+<tr><td>Nội dung</td><td>Khoảng 490 trạm cảm biến ven đường công bố tốc độ trung bình trượt 5 phút <em>theo từng chiều</em>, làm mới mỗi phút</td></tr>
+<tr><td>Giấy phép</td><td>CC BY 4.0 — <em>phải</em> ghi công Fintraffic</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Vì sao chọn nguồn này làm chuẩn?</strong> Vì đây là nguồn duy nhất tìm
+được mà mở trên <em>mọi</em> phương diện cùng lúc — và quan trọng nhất: siêu dữ
+liệu của trạm còn công bố cả <em>tốc độ thoáng tham chiếu cho cùng chiều đó</em>.
+Nghĩa là tỉ lệ kẹt xe đến từ một nguồn đã đo <em>cả hai vế</em> của phép chia,
+thay vì lấy tốc độ đo được chia cho một giới hạn pháp lý.</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Điểm cuối</th><th>Cho gì</th><th>Nhớ đệm</th></tr></thead>
+<tbody>
+<tr><td><code>/api/tms/v1/stations</code></td><td>các trạm nằm ở đâu</td><td>1 ngày</td></tr>
+<tr><td><code>/api/tms/v1/stations/{id}</code></td><td>tốc độ thoáng tham chiếu — <em>chỉ có ở đây</em>, không có trong danh sách</td><td>1 ngày, tải lười từng trạm</td></tr>
+<tr><td><code>/api/tms/v1/stations/data</code></td><td>toàn bộ số đo hiện tại trong một phản hồi ~145 kB</td><td>1 phút</td></tr>
+<tr><td><code>/api/traffic-message/v1/messages</code></td><td>sự cố và công trình, kèm hình học thật</td><td>5 phút</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note warn">
+  <strong>Hai điểm lắt léo của nguồn này, rất dễ mất công tìm lại.</strong>
+  <ul style="margin-bottom:0">
+    <li><code>Accept-Encoding: gzip</code> là <strong>bắt buộc</strong>, không
+    phải tối ưu. Thiếu nó, API trả về <code>406 Not Acceptable</code>.</li>
+    <li>Tốc độ thoáng <em>chỉ</em> nằm trên tài liệu của <em>từng trạm</em>, không
+    có trong danh sách trạm. Nên danh sách được tải nguyên khối, còn chi tiết chỉ
+    tải cho những trạm thật sự nằm trong ô đang hỏi.</li>
+  </ul>
+</div>
+
+<h3>4.2 Nhà cung cấp mô phỏng — cho phần còn lại của thế giới</h3>
+
+<p>Không có nguồn dữ liệu giao thông trực tiếp miễn phí nào cho Việt Nam. Thành
+phố có cổng thông tin dựa trên camera nhưng không có API mở. Khối này lấp chỗ
+trống bằng một mô hình <strong>tất định</strong> chạy trên hình học OSM miễn phí:</p>
+
+<ul>
+  <li><strong>Giờ trong ngày.</strong> Hai đỉnh giờ cao điểm dạng Gauss cộng một
+  bướu buổi trưa, trên một nền yên tĩnh. Kẹt xe chủ yếu là hàm của chiếc đồng hồ.</li>
+  <li><strong>Loại đường.</strong> Một đại lộ kẹt trước một phố nhỏ; một đường cao
+  tốc tách làn cầm cự lâu nhất.</li>
+  <li><strong>Một hằng số riêng cho mỗi đoạn</strong>, băm từ mã đoạn — nên
+  <em>cùng một con phố luôn là con phố xấu</em>. Kẹt xe thật không phân bố ngẫu
+  nhiên theo không gian: một ngã tư hay ùn thì ngày nào cũng ùn, và một mô hình
+  xáo lại mỗi lần làm mới sẽ trông như nhiễu chứ không như giao thông.</li>
+</ul>
+
+<div class="note">
+  <p>Mọi thứ suy ra bằng <em>băm</em>, không bao giờ bằng <code>random</code>, nên
+  cùng đầu vào cho cùng tấm bản đồ trên mọi máy và trong mọi bài kiểm thử. Giữa
+  hai mốc 5 phút, hệ số riêng của mỗi đoạn được <em>nội suy</em> chứ không nhảy
+  bậc, nên bức tranh trôi đi giống như giao thông thật thay vì nhấp nháy.</p>
+  <p>Độ tin cậy đặt ở <code>0.15</code> — thấp có chủ ý, để bất cứ thứ gì cân nhắc
+  nguồn tin cũng luôn nghiêng về cảm biến thật.</p>
+</div>
+
+<h3>4.3 GPS probe từ client — nguồn rẻ nhất và dễ biến thành rác nhất</h3>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Cửa kiểm tra</th><th>Giá trị</th></tr></thead>
+<tbody>
+<tr><td>Toạ độ</td><td>phải nằm trong khoảng hợp lệ</td></tr>
+<tr><td>Tốc độ tối đa chấp nhận</td><td><code>MAX_PLAUSIBLE_KPH = 250</code> km/h</td></tr>
+<tr><td>Coi là đang di chuyển</td><td>từ <code>MIN_MOVING_KPH = 3</code> km/h trở lên</td></tr>
+<tr><td>Tuổi tối đa</td><td><code>MAX_PROBE_AGE = 10</code> phút</td></tr>
+<tr><td>Lệch đồng hồ cho phép</td><td><code>MAX_CLOCK_SKEW = 1</code> phút (không nhận mốc thời gian ở tương lai)</td></tr>
+<tr><td>Múi giờ</td><td>bắt buộc có; mốc thời gian “trần” bị từ chối chứ không đoán</td></tr>
+<tr><td>Nguồn gắn lên bản ghi</td><td><code>gps-probe</code>, độ tin cậy <code>0.5</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note warn">
+  <strong>Một bãi xe đầy xe đang đậu không phải là một vụ kẹt xe.</strong>
+  <p>Probe đứng yên <em>không đóng góp tốc độ nào</em>. Nếu không có luật này, một
+  bãi giữ xe sẽ hiện lên trên bản đồ như một điểm tắc nghẽn.</p>
+</div>
+
+<p>Và mọi lần từ chối đều <strong>được đếm và trả về kèm lý do</strong>: một client
+gửi dữ liệu lên rồi thấy nó biến mất im lặng sẽ không bao giờ biết tên trường của
+nó bị sai.</p>
+
+<h2>5. Nối với ai?</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Đầu nối</th><th>Nội dung</th></tr></thead>
+<tbody>
+<tr><td><code>bên ngoài → ingest</code></td><td>Giao thức và lược đồ riêng của từng nhà cung cấp dừng lại ở đây, không đi xa hơn</td></tr>
+<tr><td><code>ingest → traffic</code></td><td>Các lô <code>Observations</code>: độc lập nhà cung cấp, <strong>không có mức độ</strong></td></tr>
+<tr><td><code>ingest → roadstate</code></td><td>Một báo cáo đã chuẩn hoá — chỉ có hình dạng</td></tr>
+<tr><td><code>mapdata → ingest</code></td><td><code>RoadNetwork</code>, một <code>Protocol</code> cấu trúc. Nhà cung cấp mô phỏng cần hình học để gắn số liệu lên; <strong>hai khối không import nhau</strong></td></tr>
+<tr><td><code>api → ingest</code></td><td><code>POST /ingest/probes</code>, <code>/reports</code>, <code>/refresh</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>6. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d">Mặt tiền công khai.</span></div>
+<div class="row"><span class="f">models.py</span><span class="d">Các kiểu bản ghi và lô <code>Observations</code>. Chú ý: <strong>không kiểu nào có trường mức độ kẹt xe</strong> — sự vắng mặt đó chính là ranh giới khối hiện lên trong hệ thống kiểu.</span></div>
+<div class="row"><span class="f">provider.py</span><span class="d">Khe cắm: <code>TrafficProvider</code> (lớp trừu tượng, có <code>fetch</code> và <code>coverage</code>), cùng <code>RoadNetwork</code>/<code>RoadLike</code> là <code>Protocol</code> cấu trúc.</span></div>
+<div class="row"><span class="f">errors.py</span><span class="d">Bốn loại lỗi, phân biệt theo <em>việc người gọi nên làm gì</em>: <code>ProviderUnavailable</code> (thử lại được), <code>OutsideCoverage</code> (hỏi nhà cung cấp khác), <code>BadResponse</code> (bộ chuyển đổi cần sửa).</span></div>
+<div class="row"><span class="f">http.py</span><span class="d">Nơi duy nhất khối này chạm vào mạng. Thư viện chuẩn, gzip bắt buộc, một lần thử lại.</span></div>
+<div class="row"><span class="f dir">traffic/collector.py</span><span class="d"><code>TrafficCollector</code> — ba chính sách ở mục 3.</span></div>
+<div class="row"><span class="f dir">gps/probes.py</span><span class="d"><code>parse_probe</code>, <code>probes_to_observations</code> — cửa kiểm tra nghiêm ngặt ở mục 4.3.</span></div>
+<div class="row"><span class="f dir">incidents/reports.py</span><span class="d"><code>normalize_report</code>, <code>report_of_incident</code> — rút một báo cáo về đúng hình dạng và đóng dấu nguồn gốc.</span></div>
+<div class="row"><span class="f dir">external_sources/digitraffic.py</span><span class="d">Bộ chuyển đổi tham chiếu: bốn điểm cuối, ba nhịp làm mới, mỗi thứ đệm riêng.</span></div>
+<div class="row"><span class="f dir">external_sources/simulated.py</span><span class="d">Mô hình tất định trên mạng lưới đường được đưa vào.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">27 bài: việc từ chối dữ liệu, và ba chính sách của bộ thu thập.</span></div>
+</div>
+
+<h2>7. Vì sao <code>Observations</code> không có trường “mức độ”?</h2>
+
+<p>Đây là điểm thiết kế đáng nhớ nhất của khối. Hãy so sánh:</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th></th><th>Rời khỏi <code>ingest</code></th><th>Rời khỏi <code>traffic</code></th></tr></thead>
+<tbody>
+<tr><td>Nội dung</td><td>tốc độ, mốc tốc độ thoáng, tỉ lệ giữa hai cái</td><td>“đường này đang ở mức <em>kẹt nặng</em> và đắt gấp 4 lần”</td></tr>
+<tr><td>Bản chất</td><td>nguồn tin <em>đã nói gì</em></td><td>server <em>kết luận gì</em></td></tr>
+<tr><td>Thêm nguồn mới thì</td><td>chỉ thêm một bộ chuyển đổi</td><td>không đổi gì cả — phán xét vẫn ở một chỗ</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>8. Ví dụ thật</h2>
+
+<h3>Gửi GPS probe lên</h3>
+<pre><code>POST /api/v1/ingest/probes
+<span class="s">{
+  "probes": [
+    { "lon": 106.6985, "lat": 10.7770, "speed_kph": 18.5,
+      "at": "2026-09-13T09:20:11+00:00" },
+    { "lon": 106.7001, "lat": 10.7768, "speed_kph": 0.4,
+      "at": "2026-09-13T09:20:14+00:00" }
+  ]
+}</span>
+
+<span class="c">// trả về — probe thứ hai được nhận nhưng không đóng góp tốc độ (đứng yên)</span>
+<span class="s">{ "status": "ok", "accepted": 2, "moving": 1, "rejected": 0, "reasons": [] }</span></code></pre>
+
+<h3>Hâm nóng một khu vực trước giờ cao điểm</h3>
+<pre><code>POST /api/v1/ingest/refresh
+<span class="s">{ "bbox": "106.675,10.758,106.725,10.798" }</span></code></pre>
+
+<h3>Kết quả thật khi hỏi Digitraffic, hộp trung tâm Helsinki</h3>
+<pre><code>sources: ['digitraffic']   simulated: False   failures: []
+counts:  { segments: 0,  observations: 26,  incidents: 12 }
+
+digitraffic:23117:1   41.0 / 80.0 km/h   Road 1 Helsinki Munkkiniemi
+digitraffic:20013:1   89.0 / 105.0 km/h  Road 1 Espoo, Sinimäki 2
+INCIDENT roadworks  blocking=False  pts=218  "Tie 101, Kehä I, Helsinki. Tietyö."</code></pre>
+
+<h3>Cùng câu hỏi, nhưng ở TP.HCM</h3>
+<pre><code>sources: ['simulated']   simulated: True   failures: []
+counts:  { segments: 3343,  observations: 0,  incidents: 0 }
+
+<span class="c"># Digitraffic tự nói "không thuộc phần tôi" (định tuyến theo vùng phủ),
+# nên nhà cung cấp dự phòng được hỏi — và nó gắn nhãn mô phỏng lên mọi bản ghi.</span></code></pre>
+
+<h2>9. Những gì không được chạm vào</h2>
+
+<ul>
+  <li><code>ingest.http</code>, và <code>ingest.external_sources.*</code> ngoại
+  trừ khi cần khởi tạo một nhà cung cấp</li>
+  <li>Danh sách điểm cuối của Digitraffic, thời gian đệm, bảng từ khoá tiếng Phần Lan</li>
+  <li>Đường cong giờ cao điểm bên trong nhà cung cấp mô phỏng</li>
+  <li><strong>Không được tính mức độ, chi phí, hệ số hay loại tình trạng ở đây.</strong>
+  Đó chính là ranh giới.</li>
+</ul>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>

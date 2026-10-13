@@ -1,0 +1,251 @@
+/* The simulator's chrome. Everything is namespaced `sim-` and nothing
+   redefines a selector from the map block's app.css, so the page the map
+   block serves and the page the sandbox serves look identical where they
+   overlap. */
+
+#sim-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* The map owns the pointer. Picks are read from the map's own canvas so
+     dragging, pinching and double-click zoom keep working untouched. */
+  pointer-events: none;
+  z-index: 5;
+}
+
+#sim-panel {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  width: 288px;
+  max-height: calc(100vh - 20px);
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome-bg, rgba(255, 255, 255, 0.94));
+  border: 1px solid var(--chrome-border, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  box-shadow: var(--chrome-shadow, 0 2px 8px rgba(0, 0, 0, 0.14));
+  overflow: hidden;
+}
+
+#sim-panel.sim-collapsed .sim-body {
+  display: none;
+}
+
+.sim-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--chrome-border, rgba(0, 0, 0, 0.08));
+}
+
+.sim-title {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.sim-body {
+  overflow-y: auto;
+  padding: 4px 10px 10px;
+}
+
+.sim-section {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sim-section:last-child {
+  border-bottom: none;
+}
+
+.sim-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim, #6b7580);
+  margin-bottom: 6px;
+}
+
+.sim-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sim-wrap {
+  flex-wrap: wrap;
+}
+
+.sim-note {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-dim, #6b7580);
+}
+
+.sim-note.sim-warn {
+  color: #b4531e;
+}
+
+/* -- key/value readouts ---------------------------------------------------- */
+
+.sim-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-kv dt {
+  color: var(--ink-dim, #6b7580);
+  white-space: nowrap;
+}
+
+.sim-kv dd {
+  margin: 0;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -- buttons --------------------------------------------------------------- */
+
+#sim-panel button {
+  font: inherit;
+  cursor: pointer;
+  color: var(--ink, #2b3138);
+}
+
+.sim-btn,
+.sim-chip {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  padding: 4px 9px;
+  line-height: 1.3;
+}
+
+.sim-chip {
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.sim-btn:hover,
+.sim-chip:hover {
+  background: #fff;
+}
+
+.sim-chip.sim-on {
+  background: #2b3138;
+  border-color: #2b3138;
+  color: #fff;
+}
+
+.sim-btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sim-ghost {
+  border: none;
+  background: none;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  color: var(--ink-dim, #6b7580);
+}
+
+/* -- routes ---------------------------------------------------------------- */
+
+.sim-route {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 5px 0;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.sim-route:first-child {
+  border-top: none;
+}
+
+.sim-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  align-self: center;
+}
+
+.sim-route-name {
+  font-weight: 600;
+}
+
+.sim-route-figures {
+  grid-column: 2 / 4;
+  color: var(--ink-dim, #6b7580);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.sim-route-eta {
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-delta {
+  font-weight: 600;
+}
+
+.sim-delta.sim-slower {
+  color: #b4531e;
+}
+
+.sim-fail {
+  grid-column: 2 / 4;
+  color: #b4531e;
+  font-size: 12px;
+}
+
+/* -- legend ---------------------------------------------------------------- */
+
+.sim-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--ink-dim, #6b7580);
+}
+
+.sim-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sim-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.sim-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #eee3c8;
+  color: #6b5320;
+}
+
+.sim-badge.sim-measured {
+  background: #d8ecd9;
+  color: #285c30;
+}

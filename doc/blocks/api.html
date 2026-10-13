@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>api — Tài liệu khối</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="menu-toggle" aria-label="Menu">☰</button>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Tài liệu các khối</div>
+    <div class="sidebar-sub">Hệ thống dẫn đường</div>
+  </div>
+  <div class="nav-group"><div class="nav-group-title">Tổng quan</div><a href="index.html"><span class="nav-ico">🏠</span>Bắt đầu từ đây</a></div><div class="nav-group"><div class="nav-group-title">Server — tầng ngoài</div><a href="api.html" class="active"><span class="nav-ico">🌐</span>api</a></div><div class="nav-group"><div class="nav-group-title">Server — nghiệp vụ</div><a href="routing.html"><span class="nav-ico">🧭</span>routing</a><a href="mapdata.html"><span class="nav-ico">🗺️</span>mapdata</a><a href="traffic.html"><span class="nav-ico">🚦</span>traffic</a><a href="roadstate.html"><span class="nav-ico">🚧</span>roadstate</a><a href="ingest.html"><span class="nav-ico">📥</span>ingest</a></div><div class="nav-group"><div class="nav-group-title">Server — nền móng</div><a href="storage.html"><span class="nav-ico">💾</span>storage</a><a href="domain.html"><span class="nav-ico">📐</span>domain</a><a href="config.html"><span class="nav-ico">⚙️</span>config</a><a href="observability.html"><span class="nav-ico">❤️</span>observability</a></div><div class="nav-group"><div class="nav-group-title">Client (máy người dùng)</div><a href="client-map.html"><span class="nav-ico">🖼️</span>map — bản đồ</a><a href="client-location.html"><span class="nav-ico">📍</span>location — GPS</a></div><div class="nav-group"><div class="nav-group-title">Thử nghiệm</div><a href="sandbox-demo.html"><span class="nav-ico">🧪</span>sandbox/map_demo</a></div>
+</nav>
+<main>
+  <header class="page-head">
+    <h1>api</h1>
+    <p class="lead">Bề mặt HTTP của server, và nơi lắp ráp toàn hệ thống lúc khởi động. Đọc yêu cầu, gọi một dịch vụ, trả JSON — không tính toán gì.</p>
+    <div class="badges"><span class="badge badge-brand">13 điểm cuối</span><span class="badge badge-good">36 bài kiểm thử</span><span class="badge badge-warn">Nơi duy nhất có Flask</span><span class="badge badge-neutral">Tiền tố /api/v1</span></div>
+  </header>
+  
+<h2>1. Khối này làm gì?</h2>
+
+<p><strong>Là bề mặt bên ngoài của server</strong> — vận chuyển HTTP, kiểm tra yêu
+cầu, tuần tự hoá phản hồi, ánh xạ lỗi, ghi log — <strong>và</strong> là nơi lắp
+ráp toàn bộ hệ thống lúc khởi động.</p>
+
+<div class="note bad">
+  <strong>Và nó không tính toán một thứ gì.</strong>
+  <p>Một trình xử lý: đọc yêu cầu, gọi <em>một</em> dịch vụ ứng dụng, tuần tự hoá
+  kết quả. File <code>api/routes/route.py</code> dài đúng <strong>ba câu lệnh</strong>,
+  và cách giữ cho nó như vậy là hãy nghi ngờ bất kỳ dòng nào được thêm vào mà không
+  phải đọc yêu cầu hoặc tạo phản hồi.</p>
+</div>
+
+<h2>2. Ba tầng, và mỗi tầng được phép làm gì</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tầng</th><th>Được phép</th><th>Không được phép</th></tr></thead>
+<tbody>
+<tr><td><code>api/routes/</code></td><td>nói HTTP</td><td>vòng lặp trên đối tượng nghiệp vụ, mọi quyết định</td></tr>
+<tr><td><code>api/services.py</code></td><td>xếp thứ tự gọi các khối. Biết <em>rằng</em> một lần làm mới nghĩa là thu-thập → gắn-đường → phân-loại</td><td>biết <em>bằng cách nào</em> mỗi việc đó được làm</td></tr>
+<tr><td>các khối nghiệp vụ</td><td>tính toán</td><td>biết hai tầng trên tồn tại</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>3. Toàn bộ API công khai</h2>
+
+<p>Mọi thứ nằm dưới <code>/api/v1</code>, trừ health. Hình chữ nhật viết dạng
+<code>tây,nam,đông,bắc</code>; điểm viết dạng <code>[kinh_độ, vĩ_độ]</code> —
+<strong>kinh độ trước, ở cả hai chiều</strong>.</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Điểm cuối</th><th>Làm gì</th><th>Khối phía sau</th></tr></thead>
+<tbody>
+<tr><td><code>POST /route</code></td><td>Tính tuyến đường giữa hai toạ độ</td><td>routing (+ mapdata, traffic, roadstate)</td></tr>
+<tr><td><code>GET /mapdata/roads?bbox=</code></td><td>Mạng lưới đường của server, dạng GeoJSON</td><td>mapdata</td></tr>
+<tr><td><code>GET /mapdata/graph?bbox=</code></td><td>Đồ thị dựng ra sao — <em>số đếm</em>, không phải nội dung</td><td>mapdata</td></tr>
+<tr><td><code>GET /traffic?bbox=</code></td><td>Tốc độ hiện tại, kèm nguồn gốc</td><td>traffic</td></tr>
+<tr><td><code>GET /traffic/levels</code></td><td>Bảng mức độ: ngưỡng, nhãn, màu</td><td>traffic</td></tr>
+<tr><td><code>GET /roadstate?bbox=</code></td><td>Đường cấm, ngập, công trình, sự cố đang hiệu lực</td><td>roadstate</td></tr>
+<tr><td><code>GET /roadstate/{id}</code></td><td>Một tình trạng, để người báo kiểm tra lại</td><td>roadstate</td></tr>
+<tr><td><code>DELETE /roadstate/{id}</code></td><td>Rút lại — đường đã mở lại, công trình đã xong</td><td>roadstate</td></tr>
+<tr><td><code>POST /ingest/probes</code></td><td>Nhận báo cáo vị trí GPS từ client</td><td>ingest</td></tr>
+<tr><td><code>POST /ingest/reports</code></td><td>Nhận báo cáo sự cố</td><td>ingest → roadstate</td></tr>
+<tr><td><code>POST /ingest/refresh</code></td><td>Kéo các feed cho một khu vực ngay lập tức</td><td>ingest</td></tr>
+<tr><td><code>GET /health</code></td><td>Còn sống? Không kiểm tra gì cả</td><td>observability</td></tr>
+<tr><td><code>GET /health/ready</code></td><td>Dùng được? Chạy mọi phép kiểm tra đã đăng ký</td><td>observability</td></tr>
+<tr><td><code>GET /health/info</code></td><td>Server được lắp ráp bằng những gì</td><td>observability</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>4. Ánh xạ lỗi — một quy tắc duy nhất</h2>
+
+<div class="note">
+  <strong>Mã trạng thái cho biết <em>đây là vấn đề của ai</em>.</strong>
+  <p>Tất cả nằm ở một chỗ: <code>api/middleware/errors.py</code>.</p>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tình huống</th><th>Mã</th><th>Vì sao mã đó</th></tr></thead>
+<tbody>
+<tr><td>Yêu cầu sai định dạng, loại xe không tồn tại</td><td><strong>400</strong></td><td>gửi lại y hệt cũng không giúp được gì</td></tr>
+<tr><td>Điểm chọn không gần con đường nào</td><td><strong>400</strong></td><td>dịch cái ghim đi một chút thì được</td></tr>
+<tr><td>Không có đường hợp lệ nối hai đầu</td><td><strong>404</strong></td><td>một phép tính <em>thành công</em> mà câu trả lời là “không có”</td></tr>
+<tr><td>Nguồn đầu vào trả về thứ không đọc được</td><td><strong>502</strong></td><td>vấn đề của họ, và được báo cáo trung thực</td></tr>
+<tr><td>Nguồn đầu vào không với tới được, kho dữ liệu chết</td><td><strong>503</strong></td><td>tạm thời, thử lại sau</td></tr>
+<tr><td>Bất cứ điều gì ngoài dự kiến</td><td><strong>500</strong></td><td>ghi log kèm vết gọi hàm</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note bad">
+  <strong>Thân của một lỗi 5xx không bao giờ mang theo thông điệp ngoại lệ.</strong>
+  <p>Một vết gọi hàm nằm trong phản hồi HTTP là món quà cho đúng người không nên
+  nhận nó.</p>
+</div>
+
+<h2>5. Những gì cố ý KHÔNG công bố</h2>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Không công bố</th><th>Vì sao</th></tr></thead>
+<tbody>
+<tr><td><code>Route.total_cost</code></td>
+<td>Đó là con số thuật toán tối thiểu hoá, theo đơn vị của chính chế độ chi phí,
+và có thể đã bị nhân với hệ số phạt loại đường. Một client nhìn thấy nó, sớm muộn
+cũng có người đem hiển thị như thời gian. Thời gian dự kiến là
+<code>duration_s</code>, lấy từ <code>travel_time</code>, là giây thật.</td></tr>
+<tr><td>Thứ tự toạ độ nội bộ</td>
+<td>routing lưu vĩ-độ-trước. Công bố thứ tự đó sẽ bắt mọi client phải nhớ đảo lại,
+và sẽ có một client quên.</td></tr>
+<tr><td>Cấu trúc cơ sở dữ liệu, lớp nội bộ, nội dung đồ thị</td>
+<td>Công bố đồ thị sẽ khiến mọi người dùng phụ thuộc vào <em>cách</em> way bị cắt.
+Cái hữu ích ở bên ngoài là “nó có dựng được không và to cỡ nào”, và đó chính là
+thứ <code>/mapdata/graph</code> trả về.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Nhưng các mã định danh ổn định thì <em>có</em> công bố</strong> — mã nút,
+mã đoạn, mã đường, mã tình trạng. Client thật sự cần chúng, và chúng là một phần
+của hợp đồng chứ không phải rò rỉ do sơ suất.</p>
+
+<h2>6. Các file trong thư mục</h2>
+
+<div class="filetree">
+<div class="row"><span class="f">__init__.py</span><span class="d"><code>create_app</code>, <code>build_services</code>, <code>Services</code>, <code>API_PREFIX</code>.</span></div>
+<div class="row"><span class="f">app.py</span><span class="d">Nhà máy tạo ứng dụng: đăng ký các blueprint, middleware, tiền tố đường dẫn.</span></div>
+<div class="row"><span class="f">composition.py</span><span class="d"><strong>Module duy nhất import mọi khối.</strong> Nơi chọn backend lưu trữ, dựng các nhà cung cấp, nối dây tất cả lại.</span></div>
+<div class="row"><span class="f">services.py</span><span class="d">Các dịch vụ ứng dụng: xếp thứ tự gọi các khối, không tính toán.</span></div>
+<div class="row"><span class="f dir">routes/route.py</span><span class="d"><code>POST /route</code> — ba câu lệnh.</span></div>
+<div class="row"><span class="f dir">routes/mapdata.py</span><span class="d"><code>GET /mapdata/roads</code>, <code>/mapdata/graph</code>.</span></div>
+<div class="row"><span class="f dir">routes/traffic.py</span><span class="d"><code>GET /traffic</code>, <code>/traffic/levels</code>.</span></div>
+<div class="row"><span class="f dir">routes/roadstate.py</span><span class="d"><code>GET</code>/<code>DELETE /roadstate</code>.</span></div>
+<div class="row"><span class="f dir">routes/ingest.py</span><span class="d"><code>POST /ingest/probes</code>, <code>/reports</code>, <code>/refresh</code>.</span></div>
+<div class="row"><span class="f dir">routes/health.py</span><span class="d">Ba điểm cuối sức khoẻ.</span></div>
+<div class="row"><span class="f dir">schemas/geo.py</span><span class="d">Đọc hình chữ nhật và điểm ra khỏi yêu cầu. Tồn tại để bốn trình xử lý không có bốn cơ hội cùng đọc sai thứ tự toạ độ.</span></div>
+<div class="row"><span class="f dir">schemas/route.py</span><span class="d">JSON → <code>RouteQuery</code>, và <code>Route</code> → JSON. Nơi <code>total_cost</code> bị bỏ và toạ độ được đảo.</span></div>
+<div class="row"><span class="f dir">middleware/errors.py</span><span class="d">Mọi ngoại lệ → một mã trạng thái, ở một chỗ duy nhất.</span></div>
+<div class="row"><span class="f dir">middleware/logging.py</span><span class="d">Một dòng log cho mỗi yêu cầu.</span></div>
+<div class="row"><span class="f dir">tests/</span><span class="d">36 bài chạy trên tầng HTTP thật, với thế giới bên ngoài giả lập.</span></div>
+</div>
+
+<h2>7. Vì sao <code>composition.py</code> tách khỏi <code>app.py</code>?</h2>
+
+<p><code>create_app()</code> nhận tham số <code>services=...</code>. Chính điều đó
+cho phép bộ kiểm thử chạy <em>tầng HTTP thật</em> trên một thế giới bên ngoài giả,
+bằng cách <strong>lắp ráp</strong> chứ không phải bằng vá tạm (monkey-patching).</p>
+
+<p>Trong toàn bộ 796 bài kiểm thử, chỉ có <em>các feed giao thông</em> và
+<em>nguồn dữ liệu đường</em> là được giả lập — và chúng được giả lập bằng cách
+truyền vào.</p>
+
+<h2>8. Luồng của một yêu cầu, qua từng file</h2>
+
+<pre class="diagram">POST /api/v1/route
+    │
+    ▼  app.py                 định tuyến tới blueprint
+    ▼  middleware/logging.py  một dòng log vào
+    ▼  routes/route.py        (1) schemas/route.py đọc thân yêu cầu -> RouteQuery
+    │                         (2) services.py -> routing.RoutingService.route()
+    │                         (3) schemas/route.py nặn Route thành JSON
+    │                             -- bỏ total_cost, đảo sang kinh-độ-trước
+    ▼  middleware/errors.py   mọi ngoại lệ thành mã trạng thái, chỉ ở đây
+    ▼
+JSON</pre>
+
+<h2>9. Khởi động</h2>
+
+<pre><code>python main.py --check    <span class="c"># dựng mọi khối, chạy kiểm tra sức khoẻ, thoát 0 hoặc 1</span>
+python main.py            <span class="c"># máy chủ phát triển</span></code></pre>
+
+<p><code>--check</code> dựng mọi khối <em>y hệt</em> một lần khởi động thật — mở
+cơ sở dữ liệu, chạy migration, nối dây nhà cung cấp, chạy kiểm tra sức khoẻ — rồi
+thoát. Một lỗi cấu hình lộ ra ở đó, chứ không phải ở yêu cầu đầu tiên.</p>
+
+<div class="note warn">
+  <p>Để chạy thật, hãy đưa <code>api.create_app()</code> cho một máy chủ WSGI. Máy
+  chủ tích hợp của Flask chạy đơn tiến trình và không dành cho việc đó;
+  <code>main.py</code> nói thẳng điều này thay vì để người ta tự phát hiện.</p>
+</div>
+
+<h2>10. Ví dụ thật</h2>
+
+<pre><code>curl -s localhost:8000/api/v1/route -H <span class="s">'Content-Type: application/json'</span> -d <span class="s">'{
+  "origin":      [106.6985, 10.7770],
+  "destination": [106.7180, 10.7730]
+}'</span></code></pre>
+
+<pre><code><span class="s">{ "status": "ok",
+  "distance_m": 4796.2,
+  "duration_s": 423.8,
+  "cost_mode": "fastest",
+  "profile": "car",
+  "geometry": { "type": "LineString", "coordinates": [[106.6985, 10.777], ...] },
+  "segments": ["osm:way/1268380525#0", ...],
+  "nodes": ["n:106.700037,10.773527", ...],
+  "steps": [
+    { "maneuver": "depart", "name": "Nam Kỳ Khởi Nghĩa", "distance_m": 159.0 },
+    { "maneuver": "left",   "name": "Lý Tự Trọng",       "distance_m": 322.0 }, ... ],
+  "meta": { "area": [106.6785, 10.753, 106.738, 10.797],
+            "traffic_used": true, "traffic_refreshed": true, "waypoints": 0 } }</span></code></pre>
+
+<h3>Kiểm tra sức khoẻ</h3>
+<pre><code>GET /health/ready
+
+<span class="s">{ "status": "ok", "ready": true, "degraded": [], "checks": [ ... ] }</span></code></pre>
+
+<div class="note">
+  <strong>“Suy giảm” khác với “chưa sẵn sàng”.</strong>
+  <p>Thiếu một feed giao thông là <em>suy giảm</em> — tuyến đường vẫn tính được
+  theo tốc độ thoáng. Coi đó là hỏng nặng sẽ rút một tiến trình đang phục vụ tốt
+  ra khỏi vòng cân bằng tải chỉ vì một tính năng vốn có thể sống thiếu.</p>
+</div>
+
+<h2>11. Những gì không được chạm vào</h2>
+
+<ul>
+  <li><code>api.routes.*</code>, <code>api.schemas.*</code>, <code>api.middleware.*</code></li>
+  <li><strong><code>flask</code> không được import ngoài <code>api/</code>.</strong>
+  Bài kiểm thử phụ thuộc làm hỏng build nếu điều đó xảy ra — và chính nó giữ cho
+  mọi khối khác import được bởi một script, một bài test hay một chương trình đo
+  hiệu năng mà không cần cài framework nào.</li>
+  <li><strong>Thuật toán tìm đường không được xuất hiện trong trình xử lý.</strong>
+  Nếu một thay đổi ở <code>routes/</code> bắt đầu trông giống thuật toán, chỗ của
+  nó là ở tầng dưới.</li>
+</ul>
+
+  <footer class="page-foot">
+    <p>Tài liệu này mô tả mã nguồn đang có thật trong kho, không phải kế hoạch.
+    Mọi con số đo đạc trong trang đều lấy từ lần chạy thực tế ngày 13/09/2026.</p>
+    <p>Nguồn gốc chi tiết: <code>server/ARCHITECTURE.md</code>,
+    <code>server/FLOW.md</code>, và <code>agent-system-server/blocks/&lt;khối&gt;/connector.md</code>.</p>
+  </footer>
+</main>
+<script>
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>
