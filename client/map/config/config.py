@@ -36,6 +36,15 @@ __all__ = [
     "GLYPH_PRELOAD_RANGES",
     "LABEL_PLACEMENT_INTERVAL_MS",
     "ATTRIBUTION",
+    "SERVER_URL",
+    "PROXY_TIMEOUT_S",
+    "GPS_MAX_ACCURACY_M",
+    "FOLLOW_ZOOM",
+    "ADDRESS_MIN_MOVE_M",
+    "ADDRESS_MIN_INTERVAL_MS",
+    "PROBES_ENABLED",
+    "PROBE_FLUSH_MS",
+    "PROBE_MIN_INTERVAL_MS",
 ]
 
 
@@ -137,8 +146,42 @@ GLYPH_PRELOAD_RANGES: list[str] = [
 #: roughly 150 ms the labels visibly lag the map.
 LABEL_PLACEMENT_INTERVAL_MS: int = _env_int("MAP_PLACEMENT_INTERVAL_MS", 90)
 
+# -- Navigation server ----------------------------------------------------------
+# The page reaches the server through this block's own origin: `/api/v1/...`
+# here is forwarded to the server unchanged. One origin means one HTTPS tunnel
+# is enough for a phone -- which matters, because a browser only hands out GPS
+# positions to a secure page -- and no CORS policy to keep in step.
+
+SERVER_URL: str = os.getenv("NAV_SERVER_URL", "http://127.0.0.1:8000").rstrip("/")
+
+#: A route over a cold area fetches roads from Overpass first, which can take
+#: tens of seconds; the proxy must wait at least as long as the server does.
+PROXY_TIMEOUT_S: float = _env_float("NAV_PROXY_TIMEOUT_S", 90.0)
+
+# -- The driver's position ----------------------------------------------------------
+
+#: Fixes worse than this are not drawn or used. Wi-Fi-only positions on a
+#: laptop are often 30-80 m; a phone outdoors is under 10.
+GPS_MAX_ACCURACY_M: float = _env_float("NAV_GPS_MAX_ACCURACY_M", 150.0)
+
+#: The camera zooms at least this far in on the first fix.
+FOLLOW_ZOOM: float = _env_float("NAV_FOLLOW_ZOOM", 16.5)
+
+#: Ask the server for the address again only after moving this far, and no
+#: more often than this. The server rate-limits upstream regardless; this keeps
+#: a phone from spending its data on the same answer.
+ADDRESS_MIN_MOVE_M: float = _env_float("NAV_ADDRESS_MIN_MOVE_M", 25.0)
+ADDRESS_MIN_INTERVAL_MS: int = _env_int("NAV_ADDRESS_MIN_INTERVAL_MS", 4000)
+
+#: Whether a device shares anonymous speed probes until its user says
+#: otherwise. The checkbox on the page overrides this per device.
+PROBES_ENABLED: bool = os.getenv("NAV_PROBES_ENABLED", "1").strip().lower() not in {"0", "false", "no"}
+PROBE_FLUSH_MS: int = _env_int("NAV_PROBE_FLUSH_MS", 15000)
+PROBE_MIN_INTERVAL_MS: int = _env_int("NAV_PROBE_MIN_INTERVAL_MS", 2000)
+
 ATTRIBUTION: str = (
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     " contributors &middot; tiles by"
     ' <a href="https://openfreemap.org/">OpenFreeMap</a>'
+    ' &middot; địa chỉ by <a href="https://nominatim.org/">Nominatim</a>'
 )

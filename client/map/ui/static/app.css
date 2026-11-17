@@ -32,6 +32,12 @@ html, body {
   display: block;
 }
 
+#overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
 #gl:active {
   cursor: grabbing;
 }
@@ -121,4 +127,82 @@ button:active {
 
 #attribution a {
   color: var(--ink-dim);
+}
+
+/* -- the driver's sheet: address, fix quality, trip -------------------------- */
+
+#locate[data-state="off"] { color: var(--ink-dim); }
+#locate[data-state="searching"] { color: #1a73e8; animation: pulse 1.2s ease-in-out infinite; }
+#locate[data-state="on"] { color: #1a73e8; }
+#locate[data-state="follow"] { color: #ffffff; background: #1a73e8; border-color: #1a73e8; }
+
+@keyframes pulse {
+  50% { opacity: 0.35; }
+}
+
+#sheet {
+  position: fixed;
+  left: 12px;
+  right: 76px;
+  /* Clear of the attribution line, which wraps to two lines on a phone. */
+  bottom: 52px;
+  max-width: 460px;
+  padding: 12px 14px;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: 14px;
+  box-shadow: var(--chrome-shadow);
+}
+
+#address {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+#fix-meta {
+  margin-top: 2px;
+  color: var(--ink-dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+#fix-meta:empty { display: none; }
+
+#gps-status {
+  margin-top: 6px;
+  color: #b3261e;
+  font-size: 12.5px;
+}
+
+#trip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--chrome-border);
+}
+
+#trip[hidden], #gps-status[hidden] { display: none; }
+
+#trip-summary {
+  flex: 1;
+  white-space: pre-line;
+  font-weight: 500;
+}
+
+#trip-clear {
+  padding: 4px 12px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#share {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--ink-dim);
+  font-size: 11.5px;
 }

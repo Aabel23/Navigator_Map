@@ -8,15 +8,23 @@
 // never touches a coordinate. The workers compute the *geometry*. The GPU
 // draws it in a handful of calls.
 
-import { lonLatToWorldZ0, tileZoomFor, visibleTiles, prefetchTiles, tileKey } from "./tile_math.js";
+import { lonLatToWorldZ0, worldZ0ToLonLat, tileZoomFor, visibleTiles, prefetchTiles, tileKey } from "./tile_math.js";
 import { Renderer } from "./gl.js";
 import { GlyphStore } from "./glyphs.js";
 import { SpriteStore } from "./sprite.js";
 import { LabelPlacement } from "./placement.js";
+import { Overlay } from "./overlay.js";
+import { startDriver } from "./driver.js";
 
 const SCHEDULE_INTERVAL_MS = 150;
 const ZOOM_SPEED = 0.0022;
 const HUD_INTERVAL_MS = 500;
+// A press that moves less than this and lifts within TAP_MAX_MS is a tap --
+// "take me there" -- rather than the start of a drag.
+const TAP_SLOP_PX = 8;
+const TAP_MAX_MS = 500;
+// Long enough to tell a tap from the first half of a double-tap zoom.
+const DOUBLE_TAP_MS = 280;
 
 async function main() {
   const cfg = await (await fetch("/api/config")).json();
@@ -53,8 +61,27 @@ async function main() {
   const home = { worldX: 0, worldY: 0, zoom: cfg.map.zoom };
   const camera = { ...home };
 
+  // Position, accuracy, destination and route: a second canvas over the map.
+  const overlay = new Overlay(document.getElementById("overlay"), origin);
+  const driver = startDriver({
+    cfg,
+    camera,
+    overlay,
+    ui: {
+      locate: document.getElementById("locate"),
+      address: document.getElementById("address"),
+      fixMeta: document.getElementById("fix-meta"),
+      status: document.getElementById("gps-status"),
+      trip: document.getElementById("trip"),
+      tripSummary: document.getElementById("trip-summary"),
+      tripClear: document.getElementById("trip-clear"),
+      shareProbes: document.getElementById("share-probes"),
+    },
+  });
+
   function resize() {
     renderer.resize(window.innerWidth, window.innerHeight);
+    overlay.resize(window.innerWidth, window.innerHeight);
   }
   window.addEventListener("resize", resize);
   resize();
@@ -80,9 +107,19 @@ async function main() {
     camera.worldY = before.y - (py - renderer.cssHeight / 2) / scale;
   }
 
+  // -- taps: one sets a destination, two zoom in ----------------------------------
+  let press = null;
+  let pendingTap = null;
+
+  function screenToLonLat(px, py) {
+    const w = screenToWorld(px, py);
+    return worldZ0ToLonLat(w.x + origin.x, w.y + origin.y);
+  }
+
   canvas.addEventListener("pointerdown", (ev) => {
     canvas.setPointerCapture(ev.pointerId);
     pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    press = pointers.size === 1 ? { x: ev.clientX, y: ev.clientY, t: performance.now(), moved: false } : null;
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       pinchStartDist = Math.hypot(a.x - b.x, a.y - b.y);
@@ -104,14 +141,30 @@ async function main() {
       }
       return;
     }
+    if (press && Math.hypot(cur.x - press.x, cur.y - press.y) > TAP_SLOP_PX) press.moved = true;
+    if (press && !press.moved) return;
     const scale = Math.pow(2, camera.zoom);
     camera.worldX -= (cur.x - prev.x) / scale;
     camera.worldY -= (cur.y - prev.y) / scale;
+    driver.userMovedCamera();
   });
 
   function releasePointer(ev) {
     pointers.delete(ev.pointerId);
     if (pointers.size < 2) pinchStartDist = 0;
+    if (ev.type !== "pointerup" || !press || press.moved || pointers.size > 0) return;
+    if (performance.now() - press.t > TAP_MAX_MS) return;
+    if (pendingTap) {
+      // Second tap of a double-tap: the dblclick handler zooms, nothing routes.
+      clearTimeout(pendingTap);
+      pendingTap = null;
+      return;
+    }
+    const at = screenToLonLat(ev.clientX, ev.clientY);
+    pendingTap = setTimeout(() => {
+      pendingTap = null;
+      driver.routeTo(at);
+    }, DOUBLE_TAP_MS);
   }
   canvas.addEventListener("pointerup", releasePointer);
   canvas.addEventListener("pointercancel", releasePointer);
@@ -342,12 +395,15 @@ async function main() {
     framesSinceHud += 1;
     runPlacementIfNeeded(now);
     const drawCalls = renderer.draw(camera);
+    overlay.draw(camera);
 
     if (now - lastHudUpdate > HUD_INTERVAL_MS) {
       stats.fps = (framesSinceHud * 1000) / (now - lastHudUpdate);
       lastHudUpdate = now;
       framesSinceHud = 0;
-      hud.textContent = hudText(cfg, camera, renderer, resident, inFlight, stats, drawCalls, headingSpeedPxS, placement);
+      hud.textContent =
+        hudText(cfg, camera, renderer, resident, inFlight, stats, drawCalls, headingSpeedPxS, placement) +
+        "\n" + driver.hudLines().join("\n");
     }
     requestAnimationFrame(frame);
   }

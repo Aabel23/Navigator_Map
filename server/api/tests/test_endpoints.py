@@ -390,3 +390,66 @@ def test_a_failure_message_never_reaches_the_client(client, app) -> None:
     body = response.get_data(as_text=True)
     assert "secret" not in body
     assert "postgres" not in body
+
+
+# --- Addresses ---------------------------------------------------------------
+
+
+class FakeAddresses:
+    def __init__(self):
+        self.asked = []
+
+    def reverse(self, point):
+        from mapdata import parse_nominatim
+
+        self.asked.append(point)
+        return parse_nominatim(
+            {"address": {"house_number": "2", "road": "Lê Lợi", "city": "Hồ Chí Minh"}}, point
+        )
+
+
+def _with_addresses(app, addresses):
+    import dataclasses
+
+    services = app.extensions["services"]
+    app.extensions["services"] = dataclasses.replace(services, addresses=addresses)
+
+
+def test_address_is_read_longitude_first(app):
+    fake = FakeAddresses()
+    _with_addresses(app, fake)
+    payload = app.test_client().get("/api/v1/mapdata/address?point=106.698,10.772").get_json()
+    assert payload["status"] == "ok"
+    assert payload["label"] == "2 Lê Lợi, Hồ Chí Minh"
+    assert payload["point"] == [106.698, 10.772]
+    assert fake.asked == [(106.698, 10.772)]
+
+
+def test_address_without_a_point_is_a_400(app):
+    _with_addresses(app, FakeAddresses())
+    response = app.test_client().get("/api/v1/mapdata/address")
+    assert response.status_code == 400
+    assert response.get_json()["field"] == "point"
+
+
+def test_address_with_a_swapped_point_is_a_400(app):
+    _with_addresses(app, FakeAddresses())
+    response = app.test_client().get("/api/v1/mapdata/address?point=10.772,106.698")
+    assert response.status_code == 400
+
+
+def test_address_without_a_geocoder_is_a_503(app):
+    response = app.test_client().get("/api/v1/mapdata/address?point=106.698,10.772")
+    assert response.status_code == 503
+
+
+def test_address_upstream_failure_is_a_503(app):
+    from mapdata import SourceUnavailable
+
+    class Down:
+        def reverse(self, point):
+            raise SourceUnavailable("nominatim unreachable")
+
+    _with_addresses(app, Down())
+    response = app.test_client().get("/api/v1/mapdata/address?point=106.698,10.772")
+    assert response.status_code == 503

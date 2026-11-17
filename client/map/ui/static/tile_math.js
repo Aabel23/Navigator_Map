@@ -13,6 +13,19 @@ export function lonLatToWorldZ0(lon, lat) {
   return { x, y };
 }
 
+/** World pixels at zoom 0 back to `{lon, lat}`. The inverse of `lonLatToWorldZ0`. */
+export function worldZ0ToLonLat(x, y) {
+  const lon = (x / TILE_SIZE) * 360 - 180;
+  const n = Math.PI - (2 * Math.PI * y) / TILE_SIZE;
+  const lat = (180 / Math.PI) * Math.atan(Math.sinh(n));
+  return { lon, lat };
+}
+
+/** Metres covered by one world-Z0 pixel at a latitude. Multiply by 2^-zoom for screen pixels. */
+export function metresPerWorldZ0(lat) {
+  return (40075016.686 * Math.cos((lat * Math.PI) / 180)) / TILE_SIZE;
+}
+
 /** The integer tile zoom tiles are actually requested at for a given camera zoom. */
 export function tileZoomFor(cameraZoom, maxZoom, minZoom) {
   return Math.max(minZoom, Math.min(maxZoom, Math.round(cameraZoom)));
